@@ -6,7 +6,7 @@
 #credit: Jeff Lieb	Contributed the name "yodawger"
 
 set -ueo pipefail
-export SERVICES_ROOT="/Applications"
+export SERVICES_ROOT="/yodawg"
 
 # @cmd
 services() {
