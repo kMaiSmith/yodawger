@@ -4,7 +4,7 @@ set -ueo pipefail
 
 _docker_compose() {
 	docker compose \
-		-f "${SERVICE_DIR}/conf/docker-compose.yaml" \
+		-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
 		-p "${SERVICE_NAME}" \
 		"${@}"
 }
@@ -23,9 +23,9 @@ PYTHON
 }
 
 _get_active_port() {
-	[ -f "${SERVICE_DIR}/conf/port" ] || \
-		_get_free_port > "${SERVICE_DIR}/conf/port"
+	[ -f "${SERVICE_ENV_CONF}/port" ] || \
+		_get_free_port > "${SERVICE_ENV_CONF}/port"
 
-	cat "${SERVICE_DIR}/conf/port"
+	cat "${SERVICE_ENV_CONF}/port"
 }
 

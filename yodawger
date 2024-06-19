@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+# @describe	Manage and invoke bundled docker services
+# @meta	author	Kyle Smith <kyle@kmaismith.com>
+# @meta	version	0.1.0
+#credit: Jeff Lieb	Contributed the name "yodawger"
+
+set -ueo pipefail
+export SERVICES_ROOT="/Applications"
+
+# @cmd
+services() {
+	find "${SERVICES_ROOT}" \
+		-maxdepth 1 -mindepth 1 \
+		-name '*.service' | \
+		xargs -rL1 basename | \
+		tr '[:upper:]' '[:lower:]' | \
+		sed -e 's/\.service$//'
+	exit
+}
+
+yo() {
+	env -i "${SERVICES_ROOT}/yodawger" "${@}"
+}
+export -f yo
+
+# @cmd
+# @alias	exec,s
+# @meta	default-subcommand
+# @arg	service		Name of the service to interact with
+# @arg	command		Command to invoke against the service
+# @arg	args~		Arguments to pass to the command
+yodawg() {
+	export SERVICE_NAME SERVICE_ROOT SERVICE_CONF SERVICE_DATA \
+		SERVICE_ENV SERVICE_ENV_ROOT SERVICE_ENV_CONF \
+		SERVICE_PORT SERVICES_ROOT SERVICE_CACHE
+	SERVICE_NAME="${argc_service}"
+	SERVICE_ROOT="$(find "${SERVICES_ROOT}" \
+			-maxdepth 1 -mindepth 1 \
+			-iname "${SERVICE_NAME}.service")"
+	SERVICE_CONF="${SERVICE_ROOT}/conf"
+	SERVICE_ENV="default"
+	SERVICE_ENV_ROOT="${SERVICE_ROOT}/env/${SERVICE_ENV}"
+	SERVICE_ENV_CONF="${SERVICE_ENV_ROOT}/conf"
+	SERVICE_DATA="${SERVICE_ENV_ROOT}/data"
+	SERVICE_CACHE="${SERVICE_ENV_ROOT}/cache"
+	mkdir -p "${SERVICE_CACHE}" "${SERVICE_ENV_CONF}" "${SERVICE_DATA}"
+
+	set -a
+	source "${SERVICES_ROOT}/common/script_lib.sh"
+	if [ -f "${SERVICE_ROOT}/config.sh" ]; then
+		source "${SERVICE_ROOT}/config.sh"
+	fi
+	if [ -f "${SERVICE_ENV_ROOT}/config.sh" ]; then
+		source "${SERVICE_ENV_ROOT}/config.sh"
+	fi
+
+	SERVICE_PORT="$(_get_active_port || _get_free_port)"
+
+	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
+		"${argc_command}" \
+		"${argc_args[@]}"
+}
+
+eval "$(argc --argc-eval "${0}" "${@}")"
+
