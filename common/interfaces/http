@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+set -ueo pipefail
+
+# @cmd
+up() { :; }
+
+# @cmd
+reload() { :; }
+
+# @cmd
+list_services() { :; }
+
+# @cmd
+# @arg	service
+get_service() { :; }
+
+# @cmd
+# @arg	service
+# @arg	endpoint
+add_service_endpoint() { :; }
+
+# @cmd
+# @arg	service
+# @arg	hostport
+set_service_hostport() { :; }
+
+# @cmd
+# @arg	service
+# @arg	endpoint
+remove_service_endpoint() { :; }
+
+# @cmd
+# @arg	service
+remove_service() { :; }
+
+eval "$(argc --argc-eval "${0}" "${@}")"
