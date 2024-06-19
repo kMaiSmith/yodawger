@@ -29,18 +29,3 @@ _get_active_port() {
 	cat "${SERVICE_DIR}/conf/port"
 }
 
-export SERVICE_DIR SERVICE_PORT SERVICE_NAME SERVICE_DATA SERVICE_CACHE ENVIRONMENT
-SERVICES_ROOT="/Applications"
-SERVICE_DIR="$(find "${SERVICES_ROOT}" \
-		-maxdepth 1 -mindepth 1 \
-		-iname "${SERVICE_NAME}.service" \
-		-type d)"
-SERVICE_DATA="${SERVICE_DIR}/data"
-SERVICE_CACHE="${SERVICE_DIR}/.service"
-ENVIRONMENT="default"
-mkdir -p "${SERVICE_CACHE}"
-
-set -a
-source "${SERVICE_DIR}/env/${ENVIRONMENT}"
-
-SERVICE_PORT="$(_get_active_port || _get_free_port)"
