@@ -22,10 +22,28 @@ s.close()
 PYTHON
 }
 
-_get_active_port() {
-	[ -f "${SERVICE_ENV_CONF}/port" ] || \
-		_get_free_port > "${SERVICE_ENV_CONF}/port"
+_get_port() {
+	local _name="${1:-"default"}"
+	local _port_file="${SERVICE_ENV_CONF}/port.${_name}"
 
-	cat "${SERVICE_ENV_CONF}/port"
+	[ -f "${_port_file}" ] || \
+		_get_free_port > "${_port_file}"
+
+	cat "${_port_file}"
+}
+
+_generate_password() {
+	date +%s | sha256sum | base64 | head -c 32
+}
+
+_get_password() {
+	local _name="${1:-"default"}"
+	local _password_file="${SERVICE_ENV_CONF}/password.${_name}"
+
+	[ -f "${_password_file}" ] || \
+		_generate_password > "${_password_file}"
+
+	chmod 600 "${_password_file}"
+	cat "${_password_file}"
 }
 

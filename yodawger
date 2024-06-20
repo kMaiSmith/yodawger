@@ -6,7 +6,8 @@
 #credit: Jeff Lieb	Contributed the name "yodawger"
 
 set -ueo pipefail
-export SERVICES_ROOT="/yodawg"
+export SERVICES_IP SERVICES_ROOT="/yodawg"
+SERVICES_IP="$(hostname -I | awk '{print $1}')"
 
 # @cmd
 services() {
@@ -33,7 +34,7 @@ export -f yo
 yodawg() {
 	export SERVICE_NAME SERVICE_ROOT SERVICE_CONF SERVICE_DATA \
 		SERVICE_ENV SERVICE_ENV_ROOT SERVICE_ENV_CONF \
-		SERVICE_PORT SERVICES_ROOT SERVICE_CACHE
+		SERVICE_LOG SERVICE_PORT SERVICES_ROOT SERVICE_CACHE
 	SERVICE_NAME="${argc_service}"
 	SERVICE_ROOT="$(find "${SERVICES_ROOT}" \
 			-maxdepth 1 -mindepth 1 \
@@ -43,8 +44,10 @@ yodawg() {
 	SERVICE_ENV_ROOT="${SERVICE_ROOT}/env/${SERVICE_ENV}"
 	SERVICE_ENV_CONF="${SERVICE_ENV_ROOT}/conf"
 	SERVICE_DATA="${SERVICE_ENV_ROOT}/data"
+	SERVICE_LOG="${SERVICE_ENV_ROOT}/log"
 	SERVICE_CACHE="${SERVICE_ENV_ROOT}/cache"
-	mkdir -p "${SERVICE_CACHE}" "${SERVICE_ENV_CONF}" "${SERVICE_DATA}"
+	mkdir -p "${SERVICE_CACHE}" "${SERVICE_ENV_CONF}" "${SERVICE_DATA}" \
+		"${SERVICE_LOG}"
 
 	set -a
 	source "${SERVICES_ROOT}/common/script_lib.sh"
@@ -54,8 +57,6 @@ yodawg() {
 	if [ -f "${SERVICE_ENV_ROOT}/config.sh" ]; then
 		source "${SERVICE_ENV_ROOT}/config.sh"
 	fi
-
-	SERVICE_PORT="$(_get_active_port || _get_free_port)"
 
 	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
 		"${argc_command}" \
