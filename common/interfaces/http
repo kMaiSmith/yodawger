@@ -3,35 +3,38 @@
 set -ueo pipefail
 
 # @cmd
-up() { :; }
+up() {
+	yo "${GENERIC_SERVICE_http}" up
+}
 
 # @cmd
-reload() { :; }
+reload() {
+	yo "${GENERIC_SERVICE_http}" reload
+}
 
 # @cmd
-list_services() { :; }
+list_services() {
+	yo "${GENERIC_SERVICE_http}" list_services
+}
 
 # @cmd
-# @arg	service
-get_service() { :; }
+# @arg	name
+get_service() {
+	yo "${GENERIC_SERVICE_http}" get_service "${argc_name}"
+}
 
+# TODO: update Caddy to implement this interface
 # @cmd
-# @arg	service
-# @arg	endpoint
-add_service_endpoint() { :; }
-
-# @cmd
-# @arg	service
+# @arg	name	
 # @arg	hostport
-set_service_hostport() { :; }
+add_service() {
+	yo "${GENERIC_SERVICE_http}" add_service "${argc_name}" "${argc_hostport}"
+}
 
 # @cmd
-# @arg	service
-# @arg	endpoint
-remove_service_endpoint() { :; }
-
-# @cmd
-# @arg	service
-remove_service() { :; }
+# @arg	name
+remove_service() {
+	yo "${GENERIC_SERVICE_http}" remove_service "${argc_name}"
+}
 
 eval "$(argc --argc-eval "${0}" "${@}")"

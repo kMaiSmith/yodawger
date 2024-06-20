@@ -6,6 +6,8 @@
 #credit: Jeff Lieb	Contributed the name "yodawger"
 
 set -ueo pipefail
+source "common/generics.sh"
+
 export SERVICES_IP SERVICES_ROOT="/yodawg"
 SERVICES_IP="$(hostname -I | awk '{print $1}')"
 
@@ -28,14 +30,29 @@ export -f yo
 # @cmd
 # @alias	exec,s
 # @meta	default-subcommand
-# @arg	service		Name of the service to interact with
+# @arg	service		Name of the interface to interact with
+# @arg	command		Command to invoke against the interface
+# @arg	args~		Arguments to pass to the interface
+yodawg() {
+	if [ -f "${SERVICES_ROOT}/common/interfaces/${argc_service}" ]; then
+		"${SERVICES_ROOT}/common/interfaces/${argc_service}" \
+			"${argc_command}" \
+			"${argc_args[@]}"
+	else
+		service "${argc_service}" "${argc_command}" "${argc_args[@]}"
+	fi
+}
+
+
+# @cmd
+# @arg	name		Name of the service to interact with
 # @arg	command		Command to invoke against the service
 # @arg	args~		Arguments to pass to the command
-yodawg() {
+service() {
 	export SERVICE_NAME SERVICE_ROOT SERVICE_CONF SERVICE_DATA \
 		SERVICE_ENV SERVICE_ENV_ROOT SERVICE_ENV_CONF \
 		SERVICE_LOG SERVICE_PORT SERVICES_ROOT SERVICE_CACHE
-	SERVICE_NAME="${argc_service}"
+	SERVICE_NAME="${argc_name:-"${1}"}"
 	SERVICE_ROOT="$(find "${SERVICES_ROOT}" \
 			-maxdepth 1 -mindepth 1 \
 			-iname "${SERVICE_NAME}.service")"
@@ -59,8 +76,8 @@ yodawg() {
 	fi
 
 	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
-		"${argc_command}" \
-		"${argc_args[@]}"
+		"${argc_command:-"${2}"}" \
+		"${argc_args[@]:-"${@}"}"
 }
 
 eval "$(argc --argc-eval "${0}" "${@}")"
