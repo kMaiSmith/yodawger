@@ -28,13 +28,26 @@ get_service() {
 # @arg	name	
 # @arg	hostport
 add_service() {
-	yo "${GENERIC_SERVICE_http}" add_service "${argc_name}" "${argc_hostport}"
+	yo "${GENERIC_SERVICE_http}" set_service_hostport \
+		"${argc_name}" "${argc_hostport}"
+	yo dns all_zones add_record "${argc_name}" "A" "${SERVICES_IP}"
+	yo dns reload
+
+	yo dns list_zones | \
+		awk "{ print \"${argc_name}.\"\$0 }" | \
+		xargs -rL1 "${SERVICES_ROOT}/yodawger" \
+			"${GENERIC_SERVICE_http}" add_service_endpoint \
+			"${argc_name}"
 }
 
 # @cmd
 # @arg	name
 remove_service() {
+	yo dns all_zones remove_record "${argc_name}" "A"
+
+	echo "removing service ${argc_name}"
 	yo "${GENERIC_SERVICE_http}" remove_service "${argc_name}"
+	yo dns reload
 }
 
 eval "$(argc --argc-eval "${0}" "${@}")"

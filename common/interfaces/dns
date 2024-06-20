@@ -3,43 +3,80 @@
 set -ueo pipefail
 
 # @cmd
-up() { :; }
+up() {
+	yo "${GENERIC_SERVICE_dns}" up
+}
 
 # @cmd
-reload() { :; }
+reload() {
+	yo "${GENERIC_SERVICE_dns}" reload
+}
 
 # @cmd
-list_zones() { :; }
+list_zones() {
+	yo "${GENERIC_SERVICE_dns}" list_zones
+}
 
 # @cmd
 # @arg	zone
-add_zone() { :; }
+add_zone() {
+	yo "${GENERIC_SERVICE_dns}" add_zone "${argc_zone}"
+}
 
 # @cmd
 # @arg	zone
-remove_zone() { :; }
+remove_zone() {
+	yo "${GENERIC_SERVICE_dns}" remove_zone "${argc_zone}"
+}
+
+# @cmd
+# @arg	command
+# @arg	args~
+all_zones() {
+	local _zone
+	local -a _zones
+	readarray -t _zones < <(yo "${GENERIC_SERVICE_dns}" list_zones)
+	for _zone in "${_zones[@]}"; do
+		echo "doing ${argc_command} ${argc_args[*]} for zone ${_zone}"
+		yo dns "${argc_command}" "${_zone}" "${argc_args[@]}" ||:
+	done
+
+}
 
 # @cmd
 # @arg	zone
-list_records() { :; }
+list_records() {
+	yo "${GENERIC_SERVICE_dns}" list_records "${argc_zone}"
+}
 
 # @cmd
 # @arg	zone
 # @arg	name
 # @arg	type
 # @arg	value
-add_record() { :; }
+add_record() {
+	yo "${GENERIC_SERVICE_dns}" add_record "${argc_zone}" \
+		"${argc_name}" "${argc_type}" "${argc_value}"
+}
 
 # @cmd
 # @arg zone
 # @arg name
 # @arg type
-get_record() { :; }
+get_record() {
+	yo "${GENERIC_SERVICE_dns}" get_record "${argc_zone}" \
+		"${argc_name}" "${argc_type}"
+}
+
 
 # @cmd
 # @arg zone
 # @arg name
 # @arg type
-remove_record() { :; }
+remove_record() {
+	yo "${GENERIC_SERVICE_dns}" remove_record "${argc_zone}" \
+		"${argc_name}" "${argc_type}"
+}
+
 
 eval "$(argc --argc-eval "${0}" "${@}")"
