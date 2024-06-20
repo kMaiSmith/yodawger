@@ -5,6 +5,8 @@
 # @meta	version	0.1.0
 #credit: Jeff Lieb	Contributed the name "yodawger"
 
+# @option -e --env=default Environment to manipulate
+
 set -ueo pipefail
 source "common/generics.sh"
 
@@ -52,12 +54,13 @@ service() {
 	export SERVICE_NAME SERVICE_ROOT SERVICE_CONF SERVICE_DATA \
 		SERVICE_ENV SERVICE_ENV_ROOT SERVICE_ENV_CONF \
 		SERVICE_LOG SERVICE_PORT SERVICES_ROOT SERVICE_CACHE
+
+	SERVICE_ENV="${argc_env}"
 	SERVICE_NAME="${argc_name:-"${1}"}"
 	SERVICE_ROOT="$(find "${SERVICES_ROOT}" \
 			-maxdepth 1 -mindepth 1 \
 			-iname "${SERVICE_NAME}.service")"
 	SERVICE_CONF="${SERVICE_ROOT}/conf"
-	SERVICE_ENV="default"
 	SERVICE_ENV_ROOT="${SERVICE_ROOT}/env/${SERVICE_ENV}"
 	SERVICE_ENV_CONF="${SERVICE_ENV_ROOT}/conf"
 	SERVICE_DATA="${SERVICE_ENV_ROOT}/data"

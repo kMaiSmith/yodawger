@@ -5,7 +5,7 @@ set -ueo pipefail
 _docker_compose() {
 	docker compose \
 		-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
-		-p "${SERVICE_NAME}" \
+		-p "${SERVICE_ENV}-${SERVICE_NAME}" \
 		"${@}"
 }
 export -f _docker_compose

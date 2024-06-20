@@ -37,10 +37,8 @@ all_zones() {
 	local -a _zones
 	readarray -t _zones < <(yo "${GENERIC_SERVICE_dns}" list_zones)
 	for _zone in "${_zones[@]}"; do
-		echo "doing ${argc_command} ${argc_args[*]} for zone ${_zone}"
 		yo dns "${argc_command}" "${_zone}" "${argc_args[@]}" ||:
 	done
-
 }
 
 # @cmd
