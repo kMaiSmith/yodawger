@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -ueo pipefail
+
+# @cmd
+# @arg	name
+exists() {
+	[ -d "${SERVICES_ROOT}/$(_env_path "${argc_name:-"${1}"}")" ]
+}
+
+# @cmd
+# @arg	name
+add() {
+	mkdir -p "${SERVICES_ROOT}/$(_env_path "${argc_name}")"
+}
+
+# @cmd
+# @arg	name
+remove() {
+	local _path="$(_env_path "${argc_name}")"
+
+	mkdir -p "/${SERVICES_ROOT}/.trash/$(dirname "${_path}")"
+	mv "${SERVICES_ROOT}/${_path}" \
+		"${SERVICES_ROOT}/.trash/${_path}"
+}
+
+# @cmd
+# @arg	parent
+list() {
+	local _search_root="${SERVICES_ROOT}/"
+	if [ -n "${argc_parent-}" ]; then
+		_search_root+="$(_env_path "${argc_parent}")"
+	fi
+
+	find "${_search_root}env" \
+		-mindepth 1 -maxdepth 1 -type d | \
+		xargs -rL 1 basename | \
+		awk "{ print \"${argc_parent:+"${argc_parent}:"}\"\$0 }"
+}
+
+eval "$(argc --argc-eval "${0}" "${@}")"
+

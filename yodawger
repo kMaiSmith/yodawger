@@ -5,12 +5,14 @@
 # @meta	version	0.1.0
 #credit: Jeff Lieb	Contributed the name "yodawger"
 
-# @option -e --env=default Environment to manipulate
+# @option -e --env Environment to manipulate
 
 set -ueo pipefail
-source "common/generics.sh"
-
 export SERVICES_IP SERVICES_ROOT="/yodawg"
+
+source "${SERVICES_ROOT}/common/generics.sh"
+source "${SERVICES_ROOT}/common/script_lib.sh"
+
 SERVICES_IP="$(hostname -I | awk '{print $1}')"
 
 # @cmd
@@ -37,29 +39,41 @@ export -f yo
 # @arg	args~		Arguments to pass to the interface
 yodawg() {
 	if [ -f "${SERVICES_ROOT}/common/interfaces/${argc_service}" ]; then
-		"${SERVICES_ROOT}/common/interfaces/${argc_service}" \
-			"${argc_command}" \
-			"${argc_args[@]}"
+		meta "${argc_service}" "${argc_command}" "${argc_args[@]}"
 	else
 		service "${argc_service}" "${argc_command}" "${argc_args[@]}"
 	fi
 }
 
+meta() {
+	local _name="${1}"
+	local _command="${2}"
+	local _args="${@:3}"
+
+	"${SERVICES_ROOT}/common/interfaces/${_name}" \
+		"${_command}" "${_args[@]}"
+}
 
 # @cmd
 # @arg	name		Name of the service to interact with
-# @arg	command		Command to invoke against the service
+# @arg	action		Command to invoke against the service
 # @arg	args~		Arguments to pass to the command
 service() {
 	export SERVICE_NAME SERVICE_ROOT SERVICE_CONF SERVICE_DATA \
 		SERVICE_ENV SERVICE_ENV_ROOT SERVICE_ENV_CONF \
 		SERVICE_LOG SERVICE_PORT SERVICES_ROOT SERVICE_CACHE
 
-	SERVICE_ENV="${argc_env}"
-	SERVICE_NAME="${argc_name:-"${1}"}"
+	SERVICE_NAME="${argc_name:-"${1}"}"; shift
 	SERVICE_ROOT="$(find "${SERVICES_ROOT}" \
 			-maxdepth 1 -mindepth 1 \
 			-iname "${SERVICE_NAME}.service")"
+	if [ -f "${SERVICE_ROOT}/force-env" ]; then
+		SERVICE_ENV="$(cat "${SERVICE_ROOT}/force-env" | xargs -r)"
+	else
+		SERVICE_ENV="${argc_env:-"${SERVICE_ENV:-"default"}"}"
+	fi
+	meta env exists "${SERVICE_ENV}" || \
+		error "Yodawg environment ${SERVICE_ENV} does not exist"
 	SERVICE_CONF="${SERVICE_ROOT}/conf"
 	SERVICE_ENV_ROOT="${SERVICE_ROOT}/env/${SERVICE_ENV}"
 	SERVICE_ENV_CONF="${SERVICE_ENV_ROOT}/conf"
@@ -68,9 +82,7 @@ service() {
 	SERVICE_CACHE="${SERVICE_ENV_ROOT}/cache"
 	mkdir -p "${SERVICE_CACHE}" "${SERVICE_ENV_CONF}" "${SERVICE_DATA}" \
 		"${SERVICE_LOG}"
-
 	set -a
-	source "${SERVICES_ROOT}/common/script_lib.sh"
 	if [ -f "${SERVICE_ROOT}/config.sh" ]; then
 		source "${SERVICE_ROOT}/config.sh"
 	fi
@@ -79,9 +91,8 @@ service() {
 	fi
 
 	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
-		"${argc_command:-"${2}"}" \
+		"${argc_action:-"${1}"}" \
 		"${argc_args[@]:-"${@}"}"
 }
 
 eval "$(argc --argc-eval "${0}" "${@}")"
-

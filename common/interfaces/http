@@ -23,7 +23,6 @@ get_service() {
 	yo "${GENERIC_SERVICE_http}" get_service "${argc_name}"
 }
 
-# TODO: update Caddy to implement this interface
 # @cmd
 # @arg	name	
 # @arg	hostport

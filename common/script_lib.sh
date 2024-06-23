@@ -21,6 +21,7 @@ print(addr[1])
 s.close()
 PYTHON
 }
+export -f _get_free_port
 
 _get_port() {
 	local _name="${1:-"default"}"
@@ -31,10 +32,12 @@ _get_port() {
 
 	cat "${_port_file}"
 }
+export -f _get_port
 
 _generate_password() {
 	date +%s | sha256sum | base64 | head -c 32
 }
+export -f _generate_password
 
 _get_password() {
 	local _name="${1:-"default"}"
@@ -46,4 +49,36 @@ _get_password() {
 	chmod 600 "${_password_file}"
 	cat "${_password_file}"
 }
+export -f _get_password
 
+log() {
+	local _level="${1}"
+	local _message="${2}"
+
+	{ >&9; } 2> /dev/null || exec 9>&2
+
+	echo "[${_level}] ${_message}" >&9
+}
+export -f log
+
+error() {
+	local _message="${2-}"
+
+	if [ -n "${_message-}" ]; then
+		log ERROR "${_message}"
+	fi
+
+	exit 1
+}
+export -f error
+
+_env_path() {
+	local IFS=":"
+	local _env_path=""
+
+	for subenv in ${1}; do
+		_env_path+="env/${subenv}/"
+	done
+	echo "${_env_path}"
+}
+export -f _env_path
