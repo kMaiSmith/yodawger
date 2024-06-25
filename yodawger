@@ -17,12 +17,9 @@ SERVICES_IP="$(hostname -I | awk '{print $1}')"
 
 # @cmd
 services() {
-	find "${SERVICES_ROOT}" \
-		-maxdepth 1 -mindepth 1 \
-		-name '*.service' | \
-		xargs -rL1 basename | \
-		tr '[:upper:]' '[:lower:]' | \
-		sed -e 's/\.service$//'
+	find "${SERVICES_ROOT}/services" \
+		-maxdepth 1 -mindepth 1 -type d| \
+		xargs -rL1 basename
 	exit
 }
 
@@ -80,9 +77,9 @@ _discover_service() {
 	export SERVICE_NAME SERVICE_ROOT SERVICE_ENV SERVICE_ENV_ROOT \
 		ENV_ROOT SERVICE_CONF
 	SERVICE_NAME="${_name}"
-	SERVICE_ROOT="$(find "${SERVICES_ROOT}" \
+	SERVICE_ROOT="$(find "${SERVICES_ROOT}/services" \
 			-maxdepth 1 -mindepth 1 \
-			-iname "${SERVICE_NAME}.service")"
+			-name "${SERVICE_NAME}")"
 	if [ -f "${SERVICE_ROOT}/force-env" ]; then
 		SERVICE_ENV="$(cat "${SERVICE_ROOT}/force-env" | xargs -r)"
 	else
