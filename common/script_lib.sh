@@ -3,10 +3,11 @@
 set -ueo pipefail
 
 _docker_compose() {
-	docker compose \
-		-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
-		-p "${SERVICE_ENV}-${SERVICE_NAME}" \
-		"${@}"
+	DOCKER_HOST="unix://${SERVICES_ROOT}/$(_env_path "${SERVICE_ENV}")/.docker/run/docker.sock" \
+		docker compose \
+			-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
+			-p "${SERVICE_NAME}" \
+			"${@}"
 }
 export -f _docker_compose
 

@@ -5,13 +5,65 @@ set -ueo pipefail
 # @cmd
 # @arg	name
 exists() {
-	[ -d "${SERVICES_ROOT}/$(_env_path "${argc_name:-"${1}"}")" ]
+	[ -d "${SERVICES_ROOT}/$(_env_path "${argc_name:-"${1}"}")" ] && \
+	id "${argc_name:-"${1}"}_env" &>/dev/null
+}
+
+_next_subuid_range() { set -ueo pipefail
+	local _last_subuid="$(tail -n1 /etc/subuid | cut -d: -f2)"
+	local _subuid_start="$(( _last_subuid + 100000 ))"
+	local _subuid_end="$(( _subuid_start + 99999 ))"
+
+	echo "${_subuid_start}-${_subuid_end}"
+}
+
+_next_subgid_range() { set -ueo pipefail
+	local _last_subgid="$(tail -n1 /etc/subgid | cut -d: -f2)"
+	local _subgid_start="$(( _last_subgid + 100000 ))"
+	local _subgid_end="$(( _subgid_start + 99999 ))"
+
+	echo "${_subgid_start}-${_subgid_end}"
 }
 
 # @cmd
 # @arg	name
 add() {
-	mkdir -p "${SERVICES_ROOT}/$(_env_path "${argc_name}")"
+	local _env_dir="${SERVICES_ROOT}/$(_env_path "${argc_name}")"
+	mkdir -p "${_env_dir}"
+	adduser --system --group --home "${_env_dir}" "${argc_name}_env"
+	chown "${argc_name}_env:${argc_name}_env" "${_env_dir}"
+	usermod \
+		--add-subuids "$(_next_subuid_range)" \
+		--add-subgids "$(_next_subgid_range)" \
+		"${argc_name}_env"
+	sudo -u "${argc_name}_env" dockerd-rootless-setuptool.sh install
+	systemctl enable "yodawg_env@${argc_name}"
+}
+
+# @cmd
+# @arg	name
+run() {
+	local _runtime_dir="${SERVICES_ROOT}/$(_env_path "${argc_name}")/.docker/run"
+	mkdir -p "${_runtime_dir}"
+	chown -R "${argc_name}_env:${argc_name}_env" "${_runtime_dir}"
+
+	sudo -u "${argc_name}_env" \
+		XDG_RUNTIME_DIR="${_runtime_dir}" \
+		dockerd-rootless.sh
+
+	rm -rf "${_runtime_dir}"
+}
+
+# @cmd
+# @arg	name
+up() {
+	systemctl start "yodawg_env@${argc_name}"
+}
+
+# @cmd
+# @arg	name
+status() {
+	systemctl status "yodawg_env@${argc_name}"
 }
 
 # @cmd
