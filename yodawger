@@ -5,7 +5,7 @@
 # @meta	version	0.1.0
 #credit: Jeff Lieb	Contributed the name "yodawger"
 
-# @option -e --env=`get_default_env` $SYSTEM_ENV Environment to manipulate
+# @option -e --env=`get_default_env` $SERVICE_ENV Environment to manipulate
 
 #
 #   OVERVIEW
@@ -23,8 +23,9 @@
 # your organization.  Additional organizations that may come to operate on this
 # MOO system will get their own domain structure under the /yodawg system base
 # 
-export SYSTEM_BASE="${SYSTEM_BASE:-"/yodawg"}"
-export SYSTEM_CONF="${SYSTEM_BASE}/conf"
+export SYSTEM_ROOT="${SYSTEM_ROOT:-"/yodawg"}"
+export SYSTEM_CONF="${SYSTEM_ROOT}/conf"
+export PATH="${SYSTEM_ROOT}/bin:${PATH}"
 
 mkdir -p "${SYSTEM_CONF}"
 
@@ -83,6 +84,7 @@ SUDO
 
 	sudo "${@}"
 }
+export -f consented_sudo
 
 #
 #   Prove that an apt package is installed and configured correctly
@@ -243,14 +245,11 @@ get_next_subgid_range() { set -ueo pipefail
 #   Execute wrapped docker compose command to ensure it functions predictably
 #
 docker_compose() {
-	local reason="${1}"; shift
 	local docker_socket
 
-	docker_socket="${SYSTEM_ROOT}/$(env_path "${SYSTEM_ENV}")/.docker/run/docker.sock"
+	docker_socket="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")/.docker/run/docker.sock"
 
 	if [ -w "${docker_socket}" ]; then
-		echo "In order to ${reason}, the script is running docker compose:"
-		echo "> docker compose ${*}"
 		DOCKER_HOST="unix://${docker_socket}" docker compose \
 			-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
 			-p "${SERVICE_NAME}" \
@@ -279,66 +278,77 @@ export SERVICES_IP PUBLIC_IP
 SERVICES_IP="$(hostname -I | awk '{print $1}')"
 PUBLIC_IP="$(get_public_ip)"
 
-source "${SYSTEM_BASE}/common/generics.sh"
+source "${SYSTEM_ROOT}/common/generics.sh"
 
 # @cmd
 exists() {
-	[ -d "${SYSTEM_ROOT}/$(env_path "${SYSTEM_ENV}")" ] && \
-	id "${SYSTEM_ENV}_env" &>/dev/null
+	[ -d "${SYSTEM_ROOT}/$(env_path "${argc_env}")" ] && \
+	{ [ "${argc_env}" = "host" ] || id "${argc_env}_env" &>/dev/null; }
 }
 
 # @cmd
 init() {
-	local _env_dir="${SYSTEM_ROOT}/$(env_path "${SYSTEM_ENV}")"
-	mkdir -p "${_env_dir}"
-	adduser --system --group --home "${_env_dir}" "${SYSTEM_ENV}_env"
-	chown "${SYSTEM_ENV}_env:${SYSTEM_ENV}_env" "${_env_dir}"
-	usermod \
-		--add-subuids "$(get_next_subuid_range)" \
-		--add-subgids "$(get_next_subgid_range)" \
-		"${SYSTEM_ENV}_env"
-
-	sudo -u "${SYSTEM_ENV}_env" dockerd-rootless-setuptool.sh install
-
-	systemctl enable "yodawg_env@${SYSTEM_ENV}"
+	if ! [ "${argc_env}" = "host" ]; then
+		local _env_dir _env_user="${argc_env}_env"
+		_env_dir="${SYSTEM_ROOT}/$(env_path "${argc_env}")"
+		id "${argc_env}_env" &>/dev/null || \
+			adduser --system --no-create-home \
+				--group --home "${_env_dir}" "${argc_env}_env"
+		usermod \
+			--add-subuids "$(get_next_subuid_range)" \
+			--add-subgids "$(get_next_subgid_range)" \
+			"${_env_user}"
+		mkdir -p "${_env_dir}"
+		chown -R "${_env_user}:${_env_user}" "${_env_dir}"
+		sudo -u "${_env_user}" dockerd-rootless-setuptool.sh install
+		systemctl enable "yodawg_env@${argc_env}"
+	fi
 }
 
 # @cmd
 daemon() {
-	local _runtime_dir="${SYSTEM_ROOT}/$(env_path "${SYSTEM_ENV}")/.docker/run"
-	mkdir -p "${_runtime_dir}"
-	chown -R "${SYSTEM_ENV}_env:${SYSTEM_ENV}_env" "${_runtime_dir}"
+	if ! [ "${argc_env}" = "host" ]; then
+		local _runtime_dir="${SYSTEM_ROOT}/$(env_path "${argc_env}")/.docker/run"
+		mkdir -p "${_runtime_dir}"
+		chown -R "${argc_env}_env:${argc_env}_env" "${_runtime_dir}"
+		systemctl start "user@$(id -u "${argc_env}_env")"
 
-	sudo -u "${SYSTEM_ENV}_env" \
-		XDG_RUNTIME_DIR="${_runtime_dir}" \
-		dockerd-rootless.sh
+		sudo -u "${argc_env}_env" \
+			XDG_RUNTIME_DIR="${_runtime_dir}" \
+			dockerd-rootless.sh
 
-	rm -rf "${_runtime_dir}"
+		systemctl stop "user@$(id -u "${argc_env}_env")"
+		rm -rf "${_runtime_dir}"
+	fi
 }
 
 # @cmd
 up() {
-	systemctl start "yodawg_env@${SYSTEM_ENV}"
+	if ! [ "${argc_env}" = "host" ]; then
+		systemctl start "yodawg_env@${argc_env}"
+	fi
 }
 
 # @cmd
 down() {
-	systemctl stop "yodawg_env@${SYSTEM_ENV}"
+	if ! [ "${argc_env}" = "host" ]; then
+		systemctl stop "yodawg_env@${argc_env}"
+	fi
 }
 
 # @cmd
 # @arg	name
 status() {
-	systemctl status "yodawg_env@${SYSTEM_ENV}"
+	systemctl status "yodawg_env@${argc_env}"
 }
 
 # @cmd
 # @arg	name
 remove() {
-	local _path="$(env_path "${SYSTEM_ENV}")"
+	local _path="$(env_path "${argc_env}")"
 
 	down
-	systemctl disable "yodawg_env@${SYSTEM_ENV}"
+	systemctl disable "yodawg_env@${argc_env}"
 
 	mkdir -p "/${SYSTEM_ROOT}/.trash/$(dirname "${_path}")"
 	mv "${SYSTEM_ROOT}/${_path}" \
@@ -361,16 +371,11 @@ list() {
 
 # @cmd
 services() {
-	find "${SERVICES_ROOT}/services" \
+	find "${SYSTEM_ROOT}/services" \
 		-maxdepth 1 -mindepth 1 -type d| \
 		xargs -rL1 basename
 	exit
 }
-
-yo() {
-	env -i "${SERVICES_ROOT}/yodawger" "${@}"
-}
-export -f yo
 
 # @cmd
 # @alias	exec,s
@@ -379,8 +384,9 @@ export -f yo
 # @arg	command		Command to invoke against the interface
 # @arg	args~		Arguments to pass to the interface
 yodawg() {
-	if [ -f "${SERVICES_ROOT}/common/interfaces/${argc_service}" ]; then
-		meta "${argc_service}" "${argc_command}" "${argc_args[@]}"
+	if [ -f "${SYSTEM_ROOT}/common/interfaces/${argc_service}" ]; then
+		"${SYSTEM_ROOT}/common/interfaces/${argc_service}" \
+			"${argc_command}" "${argc_args[@]}"
 	else
 		_discover_service "${argc_service}"
 
@@ -395,9 +401,9 @@ yodawg() {
 meta() {
 	local _name="${1}"
 	local _command="${2}"
-	local _args="${@:3}"
+	local -a _args="${@:3}"
 
-	"${SERVICES_ROOT}/common/interfaces/${_name}" \
+	"${SYSTEM_ROOT}/common/interfaces/${_name}" \
 		"${_command}" "${_args[@]}"
 }
 
@@ -407,18 +413,18 @@ _discover_service() {
 	export SERVICE_NAME SERVICE_ROOT SERVICE_ENV SERVICE_ENV_ROOT \
 		ENV_ROOT SERVICE_CONF
 	SERVICE_NAME="${_name}"
-	SERVICE_ROOT="$(find "${SERVICES_ROOT}/services" \
+	SERVICE_ROOT="$(find "${SYSTEM_ROOT}/services" \
 			-maxdepth 1 -mindepth 1 \
 			-name "${SERVICE_NAME}")"
 	if [ -f "${SERVICE_ROOT}/force-env" ]; then
 		SERVICE_ENV="$(cat "${SERVICE_ROOT}/force-env" | xargs -r)"
 	else
-		SERVICE_ENV="${SYSTEM_ENV}"
+		SERVICE_ENV="${argc_env}"
 	fi
 	exists "${SERVICE_ENV}" || \
 		error "Yodawg environment ${SERVICE_ENV} does not exist"
 	SERVICE_ENV_ROOT="${SERVICE_ROOT}/env/${SERVICE_ENV}"
-	ENV_ROOT="${SERVICES_ROOT}/$(_env_path "${SERVICE_ENV}")/service/${SERVICE_NAME}"
+	ENV_ROOT="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")service/${SERVICE_NAME}"
 	SERVICE_CONF="${SERVICE_ROOT}/conf"
 }
 
@@ -443,7 +449,7 @@ _init_service_dir() {
 	if [ -d "${SERVICE_ENV_ROOT}" ] && [ ! -d "${ENV_ROOT}" ]; then
 		mkdir -p "$(dirname "${ENV_ROOT}")"
 		mv "${SERVICE_ENV_ROOT}" "${ENV_ROOT}"
-	elif [ ! -L "${SERVICE_ENV_ROOT}" ] && [ -d "${ENV_ROOT}" ]; then
+	elif [ -L "${SERVICE_ENV_ROOT}" ] && [ "$(readlink -f "${SERVICE_ENV_ROOT}")" != "${ENV_ROOT}" ]; then
 		error "directory aleady exists for service ${SERVICE_NAME} in env ${SERVICE_ENV} (${ENV_ROOT})"
 	else
 		mkdir -p "${ENV_ROOT}"
@@ -461,5 +467,7 @@ _init_service_configs() {
 		source "${SERVICE_ENV_ROOT}/config.sh"
 	fi
 }
+
+source "${SYSTEM_ROOT}/common/generics.sh"
 
 eval "$(argc --argc-eval "${0}" "${@}")"

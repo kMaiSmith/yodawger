@@ -27,7 +27,7 @@ _set_generic() {
 	_generic_var="${_service}"
 
 	sed -i "s/^export GENERIC_SERVICE_${_generic}=.*/export GENERIC_SERVICE_${_generic}=\"${_service-}\"/" \
-		"${SERVICES_ROOT}/common/generics.sh"
+		"${SYSTEM_ROOT}/common/generics.sh"
 }
 export -f _set_generic
 

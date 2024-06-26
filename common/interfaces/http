@@ -34,9 +34,8 @@ add_service() {
 
 	yo dns list_zones | \
 		awk "{ print \"${argc_name}.\"\$0 }" | \
-		xargs -rL1 "${SERVICES_ROOT}/yodawger" \
-			"${GENERIC_SERVICE_http}" add_service_endpoint \
-			"${argc_name}"
+		xargs -rL1 yo "${GENERIC_SERVICE_http}" \
+			add_service_endpoint "${argc_name}"
 }
 
 # @cmd
