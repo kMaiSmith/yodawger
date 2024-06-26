@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+include "<system/network>"
 
 service::discover() {
 	local _name="${1}"
@@ -23,7 +24,7 @@ service::discover() {
 }
 
 service::init() {
-	export SERVICE_DATA SERVICE_ENV_CONF SERVICE_LOG SERVICE_CACHE
+	export SERVICE_DATA SERVICE_ENV_CONF SERVICE_LOG SERVICE_CACHE SERVICES_IP
 
 	[ "$(readlink -f "${SERVICE_ENV_ROOT}")" = "${ENV_ROOT}" ] || \
 		service::init_dir
@@ -32,6 +33,7 @@ service::init() {
 	SERVICE_ENV_CONF="${SERVICE_ENV_ROOT}/conf"
 	SERVICE_LOG="${SERVICE_ENV_ROOT}/log"
 	SERVICE_CACHE="${SERVICE_ENV_ROOT}/cache"
+	SERVICES_IP="$(hostname -I | awk '{print $1}')"
 
 	mkdir -p "${SERVICE_DATA}" "${SERVICE_ENV_CONF}" \
 		"${SERVICE_LOG}" "${SERVICE_CACHE}"
@@ -68,3 +70,34 @@ service::list() {
 		xargs -rL1 basename
 	exit
 }
+
+service::get_password() {
+	local _name="${1:-"default"}"
+	local _password_file="${SERVICE_ENV_CONF}/password.${_name}"
+
+	[ -f "${_password_file}" ] || \
+		date +%s | sha256sum | base64 | head -c 32 > "${_password_file}"
+
+	chmod 600 "${_password_file}"
+	cat "${_password_file}"
+}
+export -f service::get_password
+
+service::get_port() {
+	local _name="${1:-"default"}"
+	local _port_file="${SERVICE_ENV_CONF}/port.${_name}"
+
+	[ -f "${_port_file}" ] || \
+		python3 <<PYTHON > "${_port_file}"
+import socket
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(('', 0))
+addr = s.getsockname()
+print(addr[1])
+s.close()
+PYTHON
+
+	cat "${_port_file}"
+}
+export -f service::get_port

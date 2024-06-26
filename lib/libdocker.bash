@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
+include "<system/sudo>"
+
 #
 #   Execute wrapped docker compose command to ensure it functions predictably
 #
-docker_compose() {
+docker::compose() {
 	local docker_socket
 
 	docker_socket="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")/.docker/run/docker.sock"
@@ -21,4 +23,4 @@ docker_compose() {
 				"${@}"
 	fi
 }
-export -f docker_compose
+export -f docker::compose

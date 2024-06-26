@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+list() {}
+
+add() {}
+
+remove() {}
+
+get() {}
+
+update() {}
+
+backup() {}
+
+move() {}
+
+mount() {}
+
+unmount() {}
+

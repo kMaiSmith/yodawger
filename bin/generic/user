@@ -1,0 +1,14 @@
+#!/usr/bin/env
+
+list() {}
+
+add() {}
+
+remove() {}
+
+get() {}
+
+update() {}
+
+set_password() {}
+

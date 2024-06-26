@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+list() {}
+
+add() {}
+
+remove() {}
+
+get() {}
+
+update() {}
+
+ssh() {}
+
+backup() {}
+

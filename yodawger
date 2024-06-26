@@ -75,14 +75,7 @@ include() {
 }
 export -f include
 
-include "<system/network>"
-include "<system/package>"
-include "<system/sudo>"
-include "<system/user>"
-include "<credentials>"
-include "<docker>"
 include "<env>"
-include "<service>"
 include "<setup>"
 
 get_default_env() { env::get_default; }
@@ -96,11 +89,6 @@ setup_argc
 
 setup_systemd
 
-export SERVICES_IP PUBLIC_IP
-
-SERVICES_IP="$(hostname -I | awk '{print $1}')"
-PUBLIC_IP="$(get_public_ip)"
-
 source "${SYSTEM_ROOT}/common/generics.sh"
 
 # @cmd
@@ -112,6 +100,9 @@ exists() {
 # @cmd
 init() {
 	if ! [ "${argc_env}" = "host" ]; then
+		include "<system/user>"
+		include "<env>"
+
 		local _env_dir _env_user="${argc_env}_env"
 		_env_dir="${SYSTEM_ROOT}/$(env_path "${argc_env}")"
 		id "${argc_env}_env" &>/dev/null || \
@@ -131,6 +122,8 @@ init() {
 # @cmd
 daemon() {
 	if ! [ "${argc_env}" = "host" ]; then
+		include "<env>"
+
 		local _runtime_dir="${SYSTEM_ROOT}/$(env_path "${argc_env}")/.docker/run"
 		mkdir -p "${_runtime_dir}"
 		chown -R "${argc_env}_env:${argc_env}_env" "${_runtime_dir}"
@@ -168,6 +161,8 @@ status() {
 # @cmd
 # @arg	name
 remove() {
+	include "<env>"
+
 	local _path="$(env_path "${argc_env}")"
 
 	down
@@ -194,6 +189,8 @@ list() {
 
 # @cmd
 services() {
+	include "<service>"
+
 	service::list
 }
 
@@ -204,10 +201,12 @@ services() {
 # @arg	command		Command to invoke against the interface
 # @arg	args~		Arguments to pass to the interface
 yodawg() {
-	if [ -f "${SYSTEM_ROOT}/common/interfaces/${argc_service}" ]; then
-		"${SYSTEM_ROOT}/common/interfaces/${argc_service}" \
+	if [ -f "${SYSTEM_ROOT}/bin/generic/${argc_service}" ]; then
+		"${SYSTEM_ROOT}/bin/generic/${argc_service}" \
 			"${argc_command}" "${argc_args[@]}"
 	else
+		include "<service>"
+
 		service::discover "${argc_service}"
 
 		service::init

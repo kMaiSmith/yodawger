@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+include "<system/package>"
+include "<system/sudo>"
+
 #
 #   Set up all the necessary docker component to be able to bootstrap a MOO
 # system, including: Docker itself to containerize the operator containers,

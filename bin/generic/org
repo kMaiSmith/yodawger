@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+# @cmd
+# @arg	name
+set_name() {
+	:
+}
+
+# @cmd
+# @arg	parent
+set_parent() {
+	:
+}
+
+# @cmd
+# @arg	admin
+set_admin() {
+	:
+}
+
+# @cmd
+# @arg	domain
+set_primary_domain() {
+	:
+}
+
+# @cmd
+# @arg	domain
+set_local_domain() {
+	:
+}
+
