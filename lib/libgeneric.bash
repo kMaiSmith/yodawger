@@ -1,7 +1,9 @@
+#!/usr/bin/env bash
+
 export GENERIC_SERVICE_http="caddy"
 export GENERIC_SERVICE_dns="bind9"
 
-_is_generic() {
+generic::is_registered() {
 	local _generic="${1}"
 	local -a _generic_services=()
 
@@ -12,30 +14,29 @@ _is_generic() {
 			grep "GENERIC_SERVICE_" | \
 			sed -e 's/GENERIC_SERVICE_//'
 	)
-	echo "Generic Services: ${_generic_services[*]}"
 
 	[[ " ${_generic_services[*]} " == *" ${_generic} "* ]]	
 }
-export -f _is_generic
+export -f generic::is_registered 
 
-_set_generic() {
+generic::set() {
 	local _generic="${1}"
 	local _service="${2-}"
-	_is_generic "${_generic}" || return
+	generic::is_registered "${_generic}" || return
 
 	local -n _generic_var="GENERIC_SERVICE_${_generic}"
 	_generic_var="${_service}"
 
 	sed -i "s/^export GENERIC_SERVICE_${_generic}=.*/export GENERIC_SERVICE_${_generic}=\"${_service-}\"/" \
-		"${SYSTEM_ROOT}/common/generics.sh"
+		"${BASH_SOURCE[0]}"
 }
-export -f _set_generic
+export -f generic::set
 
-_get_generic() {
+generic::get() {
 	local _generic="${1}"
 	local -n _service="GENERIC_SERVICE_${_generic}"
 
 	echo "${_service}"
 }
-export -f _get_generic
+export -f generic::get
 

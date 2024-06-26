@@ -2,6 +2,8 @@
 
 set -ueo pipefail
 
+include "<generic>"
+
 # @cmd
 up() {
 	yo "${GENERIC_SERVICE_http}" up
