@@ -42,7 +42,7 @@ log() {
 export -f log
 
 error() {
-	local _message="${2-}"
+	local _message="${1-}"
 
 	if [ -n "${_message-}" ]; then
 		log ERROR "${_message}"
@@ -52,217 +52,40 @@ error() {
 }
 export -f error
 
-#
-#   Whenever this script needs to perform a privileged operation, it will
-# request consent to perform the operation from the script operator, including
-# an effective description of what is being performed and why
-#
-consented_sudo() {
-	local reason="${1}"; shift
-
-	cat <<SUDO
-===================== !!!!! RUNNING SUDO !!!!! ======================
-
-In order to ${reason},
-This script needs to run the following sudo command:
-
-	> sudo ${*}
-
-=====================================================================
-
-SUDO
-
-	while read -rN 1 \
-		-p "Is this script allowed to perform this sudo command? (y/n) " consent
-	do
-		echo
-		case "${consent}" in
-		y|Y) break;;
-		n|N) return 1;;
-		esac
-	done
-
-	sudo "${@}"
-}
-export -f consented_sudo
-
-#
-#   Prove that an apt package is installed and configured correctly
-#
-package_installed() {
-	local package_name="${1}"
-	local package_status
-	package_status="$(
-		dpkg -l | grep -w "${package_name}" | head -n 1 | awk '{print $1}'
-	)"
-
-	[ "${package_status}" = "ii" ]
-}
-
-env_path() {
-	local IFS=":"
-	local _path=""
-
-	for subenv in ${1}; do
-		_path+="env/${subenv}/"
-	done
-	echo "${_path}"
-}
-export -f env_path
-
-#
-#   Set up all the necessary docker component to be able to bootstrap a MOO
-# system, including: Docker itself to containerize the operator containers,
-# the docker compose plugin to simplify container orchestration, and sysbox
-# to enable a tiered hierarcy of independantly operating container systems
-# (read: Docker in Docker, or Kubernetes in Docker)
-#
-setup_docker() {
-	if ! package_installed docker.io; then
-		consented_sudo "install the docker.io package" \
-			apt install -y docker.io
-	fi
-
-	if ! [ "$(id -u)" = 0 ] && ! id -nG | grep -qw 'docker'; then
-		consented_sudo "add ${USER} (yourself) to the 'docker' group" \
-			usermod -aG docker ${USER}
-	fi
-
-	if ! package_installed rootlesskit; then
-		consented_sudo "install rootlesskit to enable rootless docker daemons" \
-			apt install -y "rootlesskit"
-	fi
-
-	local cli_plugins_dir="/usr/local/lib/docker/cli-plugins"
-	if ! [ -f "${cli_plugins_dir}/docker-compose" ]; then
-		local compose_version="2.24.7"
-		local compose_base_url="https://github.com/docker/compose/releases/download"
-
-		if ! [ -d "${cli_plugins_dir}" ]; then
-			consented_sudo "make the global cli-plguins directory to install docker-compose into" \
-				mkdir -p "${cli_plugins_dir}"
-		fi
-
-		consented_sudo "download and install docker compose into the global docker cli-plugins directory" \
-			wget "${compose_base_url}/v${compose_version}/docker-compose-linux-x86_64" \
-				-O "${cli_plugins_dir}/docker-compose"
-
-		consented_sudo "Add the executable bit to the docker compose plugin" \
-			chmod +x "${cli_plugins_dir}/docker-compose"
-	fi
-	if ! [ -e "/usr/bin/dockerd-rootless-setuptool.sh" ]; then
-		ln -sf "/usr/share/docker.io/contrib/dockerd-rootless-setup.sh" \
-			"/usr/bin/dockerd-rootless-setup.sh"
-	fi
-	if ! [ -e "/usr/bin/dockerd-rootless.sh" ]; then
-		ln -sf "/usr/share/docker.io/contrib/dockerd-rootless.sh" \
-			"/usr/bin/dockerd-rootless.sh"
-	fi
-}
-
-setup_argc() {
-	if ! command -v argc &>/dev/null; then
-		consented_sudo "install argc to /usr/local/bin for command line argument processing" \
-			bash -c "curl -fsSL https://raw.githubusercontent.com/sigoden/argc/main/install.sh | sh -s -- --to /usr/local/bin"
-	fi
-}
-
-setup_systemd() {
-	if ! [ -L "/etc/systemd/system/yodawg_env@.service" ]; then
-		ln -sf "${SYSTEM_ROOT}/src/yodawg_env@.service" \
-			"/etc/systemd/system/yodawg_env@.service"
-		sysemctl daemon-reload
-	fi
-}
-
-
-get_public_ip() {
-	local public_ip_file="${SYSTEM_CONF}/public_ip"
-
-	[ -f "${public_ip_file}" ] || \
-		curl -SsL https://wtfismyip.com/text > "${public_ip_file}"
-
-	cat "${public_ip_file}"
-}
-
-get_default_env() {
-	local default_env_file="${SYSTEM_CONF}/default_env"
-
-	[ -f "${default_env_file}" ] || \
-		echo "default" > "${default_env_file}"
-
-	cat "${default_env_file}"
-}
-
-get_port() {
-	local _name="${1:-"default"}"
-	local _port_file="${SERVICE_ENV_CONF}/port.${_name}"
-
-	[ -f "${_port_file}" ] || \
-		python3 <<PYTHON > "${_port_file}"
-import socket
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('', 0))
-addr = s.getsockname()
-print(addr[1])
-s.close()
-PYTHON
-
-	cat "${_port_file}"
-}
-export -f get_port
-
-get_password() {
-	local _name="${1:-"default"}"
-	local _password_file="${SERVICE_ENV_CONF}/password.${_name}"
-
-	[ -f "${_password_file}" ] || \
-		date +%s | sha256sum | base64 | head -c 32 > "${_password_file}"
-
-	chmod 600 "${_password_file}"
-	cat "${_password_file}"
-}
-export -f get_password
-
-get_next_subuid_range() { set -ueo pipefail
-	local _last_subuid="$(tail -n1 /etc/subuid | cut -d: -f2)"
-	local _subuid_start="$(( _last_subuid + 100000 ))"
-	local _subuid_end="$(( _subuid_start + 99999 ))"
-
-	echo "${_subuid_start}-${_subuid_end}"
-}
-
-get_next_subgid_range() { set -ueo pipefail
-	local _last_subgid="$(tail -n1 /etc/subgid | cut -d: -f2)"
-	local _subgid_start="$(( _last_subgid + 100000 ))"
-	local _subgid_end="$(( _subgid_start + 99999 ))"
-
-	echo "${_subgid_start}-${_subgid_end}"
-}
-
-#
-#   Execute wrapped docker compose command to ensure it functions predictably
-#
-docker_compose() {
-	local docker_socket
-
-	docker_socket="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")/.docker/run/docker.sock"
-
-	if [ -w "${docker_socket}" ]; then
-		DOCKER_HOST="unix://${docker_socket}" docker compose \
-			-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
-			-p "${SERVICE_NAME}" \
-			"${@}"
+include() {
+	local _path
+	case "${1}" in
+		\<*\>)
+			local _lib _lib_dir _lib_file
+			_lib="$(sed -r 's/<(.*)>/\1/' <<< "${1}")"
+			_lib_dir="$(dirname "${_lib}")"
+			_lib_file="lib$(basename "${_lib}").bash"
+			_path="${SYSTEM_ROOT}/lib/${_lib_dir}/${_lib_file}"
+			;;
+		*)
+			_path="$(dirname "${BASH_SOURCE[0]}")/${1}"
+			;;
+			
+	esac
+	if [ -f "${_path}" ]; then
+		source "${_path}"
 	else
-		consented_sudo "${reason}, docker must be run as root until you reboot your mahine" \
-			DOCKER_HOST="unix://${docker_socket}" docker compose \
-				-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
-				-p "${SERVICE_NAME}" \
-				"${@}"
+		error "Could not find library ${1}"
 	fi
 }
-export -f docker_compose
+export -f include
+
+include "<system/network>"
+include "<system/package>"
+include "<system/sudo>"
+include "<system/user>"
+include "<credentials>"
+include "<docker>"
+include "<env>"
+include "<service>"
+include "<setup>"
+
+get_default_env() { env::get_default; }
 
 #
 #   INITIALIZE THE ENVIRONMENT
@@ -371,10 +194,7 @@ list() {
 
 # @cmd
 services() {
-	find "${SYSTEM_ROOT}/services" \
-		-maxdepth 1 -mindepth 1 -type d| \
-		xargs -rL1 basename
-	exit
+	service::list
 }
 
 # @cmd
@@ -388,9 +208,9 @@ yodawg() {
 		"${SYSTEM_ROOT}/common/interfaces/${argc_service}" \
 			"${argc_command}" "${argc_args[@]}"
 	else
-		_discover_service "${argc_service}"
+		service::discover "${argc_service}"
 
-		_init_service
+		service::init
 
 		"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
 			"${argc_command}" \
@@ -398,75 +218,6 @@ yodawg() {
 	fi
 }
 
-meta() {
-	local _name="${1}"
-	local _command="${2}"
-	local -a _args="${@:3}"
-
-	"${SYSTEM_ROOT}/common/interfaces/${_name}" \
-		"${_command}" "${_args[@]}"
-}
-
-_discover_service() {
-	local _name="${1}"
-
-	export SERVICE_NAME SERVICE_ROOT SERVICE_ENV SERVICE_ENV_ROOT \
-		ENV_ROOT SERVICE_CONF
-	SERVICE_NAME="${_name}"
-	SERVICE_ROOT="$(find "${SYSTEM_ROOT}/services" \
-			-maxdepth 1 -mindepth 1 \
-			-name "${SERVICE_NAME}")"
-	if [ -f "${SERVICE_ROOT}/force-env" ]; then
-		SERVICE_ENV="$(cat "${SERVICE_ROOT}/force-env" | xargs -r)"
-	else
-		SERVICE_ENV="${argc_env}"
-	fi
-	exists "${SERVICE_ENV}" || \
-		error "Yodawg environment ${SERVICE_ENV} does not exist"
-	SERVICE_ENV_ROOT="${SERVICE_ROOT}/env/${SERVICE_ENV}"
-	ENV_ROOT="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")service/${SERVICE_NAME}"
-	SERVICE_CONF="${SERVICE_ROOT}/conf"
-}
-
-_init_service() {
-	export SERVICE_DATA SERVICE_ENV_CONF SERVICE_LOG SERVICE_CACHE
-
-	[ "$(readlink -f "${SERVICE_ENV_ROOT}")" = "${ENV_ROOT}" ] || \
-		_init_service_dir
-
-	SERVICE_DATA="${SERVICE_ENV_ROOT}/data"
-	SERVICE_ENV_CONF="${SERVICE_ENV_ROOT}/conf"
-	SERVICE_LOG="${SERVICE_ENV_ROOT}/log"
-	SERVICE_CACHE="${SERVICE_ENV_ROOT}/cache"
-
-	mkdir -p "${SERVICE_DATA}" "${SERVICE_ENV_CONF}" \
-		"${SERVICE_LOG}" "${SERVICE_CACHE}"
-
-	_init_service_configs
-}
-
-_init_service_dir() {
-	if [ -d "${SERVICE_ENV_ROOT}" ] && [ ! -d "${ENV_ROOT}" ]; then
-		mkdir -p "$(dirname "${ENV_ROOT}")"
-		mv "${SERVICE_ENV_ROOT}" "${ENV_ROOT}"
-	elif [ -L "${SERVICE_ENV_ROOT}" ] && [ "$(readlink -f "${SERVICE_ENV_ROOT}")" != "${ENV_ROOT}" ]; then
-		error "directory aleady exists for service ${SERVICE_NAME} in env ${SERVICE_ENV} (${ENV_ROOT})"
-	else
-		mkdir -p "${ENV_ROOT}"
-	fi
-
-	ln -sf "${ENV_ROOT}" "${SERVICE_ENV_ROOT}"
-}
-
-_init_service_configs() {
-	set -a
-	if [ -f "${SERVICE_ROOT}/config.sh" ]; then
-		source "${SERVICE_ROOT}/config.sh"
-	fi
-	if [ -f "${SERVICE_ENV_ROOT}/config.sh" ]; then
-		source "${SERVICE_ENV_ROOT}/config.sh"
-	fi
-}
 
 source "${SYSTEM_ROOT}/common/generics.sh"
 
