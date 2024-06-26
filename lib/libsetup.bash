@@ -62,9 +62,9 @@ setup_argc() {
 
 setup_systemd() {
 	if ! [ -L "/etc/systemd/system/yodawg_env@.service" ]; then
-		ln -sf "${SYSTEM_ROOT}/src/yodawg_env@.service" \
+		ln -sf "${SYSTEM_ROOT}/lib/systemd/yodawg_env@.service" \
 			"/etc/systemd/system/yodawg_env@.service"
-		sysemctl daemon-reload
+		systemctl daemon-reload
 	fi
 }
 
