@@ -105,31 +105,13 @@ init() {
 		id "${argc_env}_env" &>/dev/null || \
 			adduser --system --no-create-home \
 				--group --home "${_env_dir}" "${argc_env}_env"
-		usermod \
-			--add-subuids "$(get_next_subuid_range)" \
-			--add-subgids "$(get_next_subgid_range)" \
-			"${_env_user}"
+
 		mkdir -p "${_env_dir}"
 		chown -R "${_env_user}:${_env_user}" "${_env_dir}"
-		sudo -u "${_env_user}" dockerd-rootless-setuptool.sh install
-		systemctl enable "yodawg_env@${argc_env}"
-	fi
-}
-
-# @cmd
-daemon() {
-	if ! [ "${argc_env}" = "host" ]; then
-		local _runtime_dir="${SYSTEM_ROOT}/$(env_path "${argc_env}")/.docker/run"
-		mkdir -p "${_runtime_dir}"
-		chown -R "${argc_env}_env:${argc_env}_env" "${_runtime_dir}"
-		systemctl start "user@$(id -u "${argc_env}_env")"
-
-		sudo -u "${argc_env}_env" \
-			XDG_RUNTIME_DIR="${_runtime_dir}" \
-			dockerd-rootless.sh
-
-		systemctl stop "user@$(id -u "${argc_env}_env")"
-		rm -rf "${_runtime_dir}"
+		
+		if [ "${argc_env}" != "default" ] && ! docker network inspect "${argc_env}" &>/dev/null; then
+			docker network create --attachable --internal "${argc_env}"
+		fi
 	fi
 }
 
