@@ -162,12 +162,6 @@ list() {
 		awk "{ print \"${argc_parent:+"${argc_parent}:"}\"\$0 }"
 }
 
-# @cmd
-services() {
-	include "<service>"
-
-	service::list
-}
 
 # @cmd
 # @alias	exec,s

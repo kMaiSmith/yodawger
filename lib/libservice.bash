@@ -18,6 +18,7 @@ service::discover() {
 	fi
 	exists "${SERVICE_ENV}" || \
 		error "Yodawg environment ${SERVICE_ENV} does not exist"
+	mkdir -p "${SERVICE_ROOT}/env"
 	SERVICE_ENV_ROOT="${SERVICE_ROOT}/env/${SERVICE_ENV}"
 	ENV_ROOT="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")service/${SERVICE_NAME}"
 	SERVICE_CONF="${SERVICE_ROOT}/conf"
@@ -89,6 +90,7 @@ service::get_port() {
 
 	[ -f "${_port_file}" ] || \
 		python3 <<PYTHON > "${_port_file}"
+# Yo Dawg, i heard you liked code smells, so I mixed some python with your bash
 import socket
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -101,3 +103,23 @@ PYTHON
 	cat "${_port_file}"
 }
 export -f service::get_port
+
+service::add() {
+	local _name="${1}"
+	local _git_url="${2}"
+
+	if [ -d "${SYSTEM_ROOT}/services/${_name}" ]; then
+		error "Service ${_name} already exists"
+	fi
+
+	mkdir -p "${SYSTEM_ROOT}/services"
+	git clone "${_git_url}" "${SYSTEM_ROOT}/services/${_name}"
+}
+export -f service::add
+
+service::update() {
+	local _name="${1}"
+
+	git -C "${SYSTEM_ROOT}/services/${_name}" pull
+}
+export -f service::update

@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+# @cmd
+list() {
+	include "<service>"
+
+	service::list
+}
+
+# @cmd
+# @arg name!
+# @arg git_url
+add() {
+	include "<service>"
+
+	service::add "${argc_name}" \
+		"${argc_git_url:-"git@github.com:Jeffercodians/yodawg-${argc_name}.git"}"
+}
+
+# @cmd
+# @arg name!
+update() {
+	include "<service>"
+
+	service::update "${argc_name}"
+}
+
+eval "$(argc --argc-eval "${0}" "${@}")"
+
