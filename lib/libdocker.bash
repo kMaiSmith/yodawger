@@ -57,3 +57,17 @@ docker::run() {
 	docker run "${docker_args[@]}" "${DOCKER_IMAGE}" "${DOCKER_CMD[@]}"
 }
 export -f docker::run
+
+docker::network::create() {
+	log INFO "Creating network ${SERVICE_NETWORK}"
+	docker network inspect "${SERVICE_NETWORK}" &>/dev/null || \
+		docker network create "${SERVICE_NETWORK}"
+}
+export -f docker::network::create
+
+docker::network::rm() {
+	docker network inspect "${SERVICE_NETWORK}" &>/dev/null
+	docker network rm "${SERVICE_NETWORK}"
+}
+export -f docker::network::rm
+

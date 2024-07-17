@@ -6,6 +6,9 @@
 #credit: Jeff Lieb	Contributed the name "yodawger"
 
 # @option -e --env=`get_default_env` $SERVICE_ENV Environment to manipulate
+# @arg	service		Name of the interface to interact with
+# @arg	command		Command to invoke against the interface
+# @arg	args~		Arguments to pass to the interface
 
 #
 #   OVERVIEW
@@ -89,101 +92,21 @@ setup_argc
 
 setup_systemd
 
-# @cmd
-exists() {
-	[ -d "${SYSTEM_ROOT}/$(env_path "${argc_env}")" ] && \
-	{ [ "${argc_env}" = "host" ] || id "${argc_env}_env" &>/dev/null; }
-}
-
-# @cmd
-init() {
-	if ! [ "${argc_env}" = "host" ]; then
-		include "<system/user>"
-
-		local _env_dir _env_user="${argc_env}_env"
-		_env_dir="${SYSTEM_ROOT}/$(env_path "${argc_env}")"
-		id "${argc_env}_env" &>/dev/null || \
-			adduser --system --no-create-home \
-				--group --home "${_env_dir}" "${argc_env}_env"
-
-		mkdir -p "${_env_dir}"
-		chown -R "${_env_user}:${_env_user}" "${_env_dir}"
-		
-		if [ "${argc_env}" != "default" ] && ! docker network inspect "${argc_env}" &>/dev/null; then
-			docker network create --attachable --internal "${argc_env}"
-		fi
-	fi
-}
-
-# @cmd
-up() {
-	if ! [ "${argc_env}" = "host" ]; then
-		systemctl start "yodawg_env@${argc_env}"
-	fi
-}
-
-# @cmd
-down() {
-	if ! [ "${argc_env}" = "host" ]; then
-		systemctl stop "yodawg_env@${argc_env}"
-	fi
-}
-
-# @cmd
-# @arg	name
-status() {
-	systemctl status "yodawg_env@${argc_env}"
-}
-
-# @cmd
-# @arg	name
-remove() {
-	local _path="$(env_path "${argc_env}")"
-
-	down
-	systemctl disable "yodawg_env@${argc_env}"
-
-	mkdir -p "/${SYSTEM_ROOT}/.trash/$(dirname "${_path}")"
-	mv "${SYSTEM_ROOT}/${_path}" \
-		"${SYSTEM_ROOT}/.trash/${_path}"
-}
-
-# @cmd
-# @arg	parent
-list() {
-	local _search_root="${SYSTEM_ROOT}/"
-	if [ -n "${argc_parent-}" ]; then
-		_search_root+="$(env_path "${argc_parent}")"
-	fi
-
-	find "${_search_root}env" \
-		-mindepth 1 -maxdepth 1 -type d | \
-		xargs -rL 1 basename | \
-		awk "{ print \"${argc_parent:+"${argc_parent}:"}\"\$0 }"
-}
-
-
-# @cmd
-# @alias	exec,s
-# @meta	default-subcommand
-# @arg	service		Name of the interface to interact with
-# @arg	command		Command to invoke against the interface
-# @arg	args~		Arguments to pass to the interface
-yodawg() {
-	if [ -f "${SYSTEM_ROOT}/bin/generic/${argc_service}" ]; then
-		"${SYSTEM_ROOT}/bin/generic/${argc_service}" \
-			"${argc_command}" "${argc_args[@]}"
-	else
-		include "<service>"
-
-		service::discover "${argc_service}"
-
-		service::init
-
-		"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
-			"${argc_command}" \
-			"${argc_args[@]}"
-	fi
-}
-
 eval "$(argc --argc-eval "${0}" "${@}")"
+
+export SYSTEM_ENV="${argc_env}"
+
+if [ -f "${SYSTEM_ROOT}/bin/generic/${argc_service}" ]; then
+	"${SYSTEM_ROOT}/bin/generic/${argc_service}" \
+		"${argc_command}" "${argc_args[@]}"
+else
+	include "<service>"
+
+	service::discover "${argc_service}"
+
+	service::init
+
+	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
+		"${argc_command}" \
+		"${argc_args[@]}"
+fi
