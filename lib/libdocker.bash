@@ -24,20 +24,13 @@ include "<system/sudo>"
 docker::compose() {
 	local docker_socket
 
-	docker_socket="/var/run/docker.sock"
+	docker_socket="${SYSTEM_ROOT}/$(env_dir "${SERVICE_ENV}").docker/run/docker.sock"
+	export DOCKER_HOST="unix://${docker_socket}"
 
-	if [ -w "${docker_socket}" ]; then
-		DOCKER_HOST="unix://${docker_socket}" docker compose \
-			-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
-			-p "${SERVICE_ENV}-${SERVICE_NAME}" \
-			"${@}"
-	else
-		consented_sudo "${reason}, docker must be run as root until you reboot your mahine" \
-			DOCKER_HOST="unix://${docker_socket}" docker compose \
-				-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
-				-p "${SERVICE_ENV}-${SERVICE_NAME}" \
-				"${@}"
-	fi
+	sudo -u "${SERVICE_ENV}_env" docker compose \
+		-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
+		-p "${SERVICE_NAME}" \
+		"${@}"
 }
 export -f docker::compose
 

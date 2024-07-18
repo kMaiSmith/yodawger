@@ -59,6 +59,14 @@ setup_docker() {
 		consented_sudo "Add the executable bit to the docker compose plugin" \
 			chmod +x "${cli_plugins_dir}/docker-compose"
 	fi
+	if ! [ -x "/usr/local/bin/fuse-overlayfs" ]; then
+		local overlayfs_version="1.14"
+		consented_sudo "Download fuse-overlayfs version ${overlayfs_version} for better rootless docker support" \
+			curl -SsLo "/usr/local/bin/fuse-overlayfs" \
+				"https://github.com/containers/fuse-overlayfs/releases/download/v${overlayfs_version}/fuse-overlayfs-$(uname -m)"
+		consented_sudo "Make fuse-overlayfs executable for the system" \
+			chmod +x "/usr/local/bin/fuse-overlayfs"
+	fi
 	if ! [ -e "/usr/bin/dockerd-rootless-setuptool.sh" ]; then
 		ln -sf "/usr/share/docker.io/contrib/dockerd-rootless-setup.sh" \
 			"/usr/bin/dockerd-rootless-setup.sh"

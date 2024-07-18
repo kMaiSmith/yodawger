@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/yodawg/yodawger daemon %i
+ExecStart=/yodawg/yodawger --env %i env daemon
 KillMode=mixed
 TimeoutStopSec=120s
 

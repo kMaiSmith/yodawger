@@ -20,10 +20,12 @@ env_path() {
 	local IFS=":"
 	local _path=""
 
-	for subenv in ${1}; do
-		_path+="env/${subenv}/"
-	done
-	echo "${_path}"
+	if [ "${1}" != "host" ]; then
+		for subenv in ${1}; do
+			_path+="env/${subenv}/"
+		done
+		echo "${_path}"
+	fi
 }
 export -f env_path
 
@@ -41,21 +43,31 @@ env::init() {
 
 	local _env_dir _env_conf _env_user="${name}_env"
 	_env_dir="${SYSTEM_ROOT}/$(env_path "${name}")"
-	_env_conf="${ENV_ROOT}/conf"
+	_env_conf="${_env_dir}/conf"
 	id "${name}_env" &>/dev/null || \
-		adduser --system --no-create-home \
-			--group --home "${_env_dir}" "${name}_env"
+		useradd --create-home --user-group --home-dir "${_env_dir}" "${name}_env"
 
 	mkdir -p "${_env_dir}" "${_env_conf}"
-	chown -R "${_env_user}:${_env_user}" "${_env_dir}"
+	sudo -u "${_env_user}" test -O "${_env_dir}" || \
+		chown -R "${_env_user}:${_env_user}" "${_env_dir}"
+
+	systemctl enable "yodawg_env@${name}"
 }
 
 env::daemon() {
 	local name="${1}"
 
-	local _runtime_dir="${SYSTEM_ROOT}/$(env_path "${name}")/.docker/run"
-	mkdir -p "${_runtime_dir}"
-	chown -R "${name}_env:${name}_env" "${_runtime_dir}"
+	local _env_dir="${SYSTEM_ROOT}/$(env_path "${name}")"
+	local _runtime_dir="${_env_dir}.docker/run"
+	local _config_dir="${_env_dir}.config/docker"
+
+	mkdir -p "${_runtime_dir}" "${_config_dir}"
+	chown -R "${name}_env:${name}_env" "${_runtime_dir}" "${_config_dir}"
+	cat <<CONFIG | sudo -u "${name}_env" tee "${_config_dir}/daemon.json" >/dev/null 
+{
+	"storage-driver": "fuse-overlayfs"
+}
+CONFIG
 	systemctl start "user@$(id -u "${name}_env")"
 
 	sudo -u "${name}_env" \

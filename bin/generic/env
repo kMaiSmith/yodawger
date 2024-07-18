@@ -26,35 +26,27 @@ exists() {
 
 # @cmd
 init() {
-	if ! [ "${SYSTEM_ENV}" = "host" ]; then
-		include "<system/user>"
-		include "<env>"
+	include "<system/user>"
+	include "<env>"
 
-		env::init "${SYSTEM_ENV}"
-	fi
+	env::init "${SYSTEM_ENV}"
 }
 
 # @cmd
 daemon() {
-        if ! [ "${SYSTEM_ENV}" = "host" ]; then
-                include "<env>"
+	include "<env>"
 
-		env::daemon "${SYSTEM_ENV}"
-        fi
+	env::daemon "${SYSTEM_ENV}"
 }
 
 # @cmd
 up() {
-	if ! [ "${SYSTEM_ENV}" = "host" ]; then
-		systemctl start "yodawg_env@${SYSTEM_ENV}"
-	fi
+	systemctl start "yodawg_env@${SYSTEM_ENV}"
 }
 
 # @cmd
 down() {
-	if ! [ "${SYSTEM_ENV}" = "host" ]; then
-		systemctl stop "yodawg_env@${SYSTEM_ENV}"
-	fi
+	systemctl stop "yodawg_env@${SYSTEM_ENV}"
 }
 
 # @cmd
@@ -66,7 +58,7 @@ status() {
 # @cmd
 # @arg	name
 remove() {
-	local _path="$(env_path "${SYSTEM_ENV}")"
+	:
 }
 
 

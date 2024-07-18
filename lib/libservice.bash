@@ -38,15 +38,15 @@ service::discover() {
 	yo env exists "${SERVICE_ENV}" || \
 		error "Yodawg environment ${SERVICE_ENV} does not exist"
 	mkdir -p "${SERVICE_ROOT}/env"
-	SERVICE_ENV_ROOT="${SERVICE_ROOT}/env/${SERVICE_ENV}"
+	SERVICE_ENV_ROOT="${SERVICE_ROOT}/$(env_path "${SERVICE_ENV}")"
 	ENV_ROOT="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")"
-	ENV_SERVICE_ROOT="${ENV_ROOT}service/${SERVICE_NAME}"
+	ENV_SERVICE_ROOT="${ENV_ROOT}services/${SERVICE_NAME}"
 	SERVICE_CONF="${SERVICE_ROOT}/conf"
 	SERVICE_NETWORK="${SERVICE_ENV}_${SERVICE_NAME}"
 }
 
 service::init() {
-	export SERVICE_DATA SERVICE_ENV_CONF SERVICE_LOG SERVICE_CACHE SERVICES_IP
+	export SERVICE_DATA SERVICE_ENV_CONF SERVICE_LOG SERVICE_CACHE SERVICES_IP SERVICE_SOCKET
 
 	[ "$(readlink -f "${SERVICE_ENV_ROOT}")" = "${ENV_ROOT}" ] || \
 		service::init_dir
@@ -55,16 +55,18 @@ service::init() {
 	SERVICE_ENV_CONF="${SERVICE_ENV_ROOT}/conf"
 	SERVICE_LOG="${SERVICE_ENV_ROOT}/log"
 	SERVICE_CACHE="${SERVICE_ENV_ROOT}/cache"
+	SERVICE_SOCKET="${SERVICE_ENV_ROOT}/socket"
 	SERVICES_IP="$(hostname -I | awk '{print $1}')"
 
 	mkdir -p "${SERVICE_DATA}" "${SERVICE_ENV_CONF}" \
-		"${SERVICE_LOG}" "${SERVICE_CACHE}"
+		"${SERVICE_LOG}" "${SERVICE_CACHE}" "${SERVICE_SOCKET}"
 
 	service::init_configs
 }
 
 service::init_dir() {
 	if [ -d "${SERVICE_ENV_ROOT}" ] && [ ! -d "${ENV_SERVICE_ROOT}" ]; then
+		# Migrate data stored in the service dir to the env dirs
 		mkdir -p "$(dirname "${ENV_SERVICE_ROOT}")"
 		mv "${SERVICE_ENV_ROOT}" "${ENV_SERVICE_ROOT}"
 	elif [ -L "${SERVICE_ENV_ROOT}" ] && [ "$(readlink -f "${SERVICE_ENV_ROOT}")" != "${ENV_SERVICE_ROOT}" ]; then
@@ -73,7 +75,8 @@ service::init_dir() {
 		mkdir -p "${ENV_SERVICE_ROOT}"
 	fi
 
-	ln -sf "${ENV_SERVICE_ROOT}" "${SERVICE_ENV_ROOT}"
+	[ "${ENV_SERVICE_ROOT}" = "${SERVICE_ENV_ROOT}" ] || \
+		ln -sf "${ENV_SERVICE_ROOT}" "${SERVICE_ENV_ROOT}"
 }
 
 service::init_configs() {
