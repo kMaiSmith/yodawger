@@ -29,17 +29,22 @@ include "<system/sudo>"
 setup_docker() {
 	if ! package_installed docker.io; then
 		consented_sudo "install the docker.io package" \
-			apt install -y docker.io
-	fi
-
-	if ! [ "$(id -u)" = 0 ] && ! id -nG | grep -qw 'docker'; then
-		consented_sudo "add ${USER} (yourself) to the 'docker' group" \
-			usermod -aG docker ${USER}
+			apt install -y "docker.io"
 	fi
 
 	if ! package_installed rootlesskit; then
 		consented_sudo "install rootlesskit to enable rootless docker daemons" \
 			apt install -y "rootlesskit"
+	fi
+
+	if ! package_installed dbus-user-session; then
+		consented_sudo "install dbus-user-session to enable rootless docker daemons" \
+			apt install -y "dbus-user-session"
+	fi
+
+	if ! package_installed systemd-container; then
+		consented_sudo "install systemd-container to enable rootless docker daemons to run for logged out user environments" \
+			apt install -y "systemd-container"
 	fi
 
 	local cli_plugins_dir="/usr/local/lib/docker/cli-plugins"
@@ -68,12 +73,14 @@ setup_docker() {
 			chmod +x "/usr/local/bin/fuse-overlayfs"
 	fi
 	if ! [ -e "/usr/bin/dockerd-rootless-setuptool.sh" ]; then
-		ln -sf "/usr/share/docker.io/contrib/dockerd-rootless-setup.sh" \
-			"/usr/bin/dockerd-rootless-setup.sh"
+		consented_sudo "Link dockerd-rootless-setuptool.sh to a PATH findable location (/usr/bin)" \
+			ln -sf "/usr/share/docker.io/contrib/dockerd-rootless-setuptool.sh" \
+				"/usr/bin/dockerd-rootless-setuptool.sh"
 	fi
 	if ! [ -e "/usr/bin/dockerd-rootless.sh" ]; then
-		ln -sf "/usr/share/docker.io/contrib/dockerd-rootless.sh" \
-			"/usr/bin/dockerd-rootless.sh"
+		consented_sudo "Link dockerd-rootless.sh to a PATH findable location (/usr/bin)" \
+			ln -sf "/usr/share/docker.io/contrib/dockerd-rootless.sh" \
+				"/usr/bin/dockerd-rootless.sh"
 	fi
 }
 

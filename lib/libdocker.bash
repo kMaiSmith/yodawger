@@ -24,10 +24,10 @@ include "<system/sudo>"
 docker::compose() {
 	local docker_socket
 
-	docker_socket="${SYSTEM_ROOT}/$(env_dir "${SERVICE_ENV}").docker/run/docker.sock"
+	docker_socket="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")/.docker/run/docker.sock"
 	export DOCKER_HOST="unix://${docker_socket}"
 
-	sudo -u "${SERVICE_ENV}_env" docker compose \
+	docker compose \
 		-f "${SERVICE_ROOT}/conf/docker-compose.yaml" \
 		-p "${SERVICE_NAME}" \
 		"${@}"

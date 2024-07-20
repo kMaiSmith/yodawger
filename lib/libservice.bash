@@ -40,7 +40,7 @@ service::discover() {
 	mkdir -p "${SERVICE_ROOT}/env"
 	SERVICE_ENV_ROOT="${SERVICE_ROOT}/$(env_path "${SERVICE_ENV}")"
 	ENV_ROOT="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")"
-	ENV_SERVICE_ROOT="${ENV_ROOT}services/${SERVICE_NAME}"
+	ENV_SERVICE_ROOT="${ENV_ROOT}/services/${SERVICE_NAME}"
 	SERVICE_CONF="${SERVICE_ROOT}/conf"
 	SERVICE_NETWORK="${SERVICE_ENV}_${SERVICE_NAME}"
 }
@@ -76,12 +76,12 @@ service::init_dir() {
 	fi
 
 	[ "${ENV_SERVICE_ROOT}" = "${SERVICE_ENV_ROOT}" ] || \
-		ln -sf "${ENV_SERVICE_ROOT}" "${SERVICE_ENV_ROOT}"
+		ln -sfT "${ENV_SERVICE_ROOT}" "${SERVICE_ENV_ROOT}"
 }
 
 service::init_configs() {
 	set -a
-	if [ -f "${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")config.sh" ]; then
+	if [ -f "${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")/config.sh" ]; then
 		source "${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")config.sh"
 	fi
 	if [ -f "${SERVICE_ROOT}/config.sh" ]; then

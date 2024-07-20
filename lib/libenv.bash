@@ -24,7 +24,7 @@ env_path() {
 		for subenv in ${1}; do
 			_path+="env/${subenv}/"
 		done
-		echo "${_path}"
+		echo "${_path%/}"
 	fi
 }
 export -f env_path
@@ -52,27 +52,32 @@ env::init() {
 		chown -R "${_env_user}:${_env_user}" "${_env_dir}"
 
 	systemctl enable "yodawg_env@${name}"
+
+	local _config_dir="${_env_dir}/.config"
+
+	mkdir -p "${_config_dir}/docker"
+	chown -R "${_env_user}:${_env_user}" "${_config_dir}"
+	cat <<CONFIG | sudo -u "${_env_user}" tee "${_config_dir}/docker/daemon.json" >/dev/null 
+{
+	"storage-driver": "fuse-overlayfs"
+}
+CONFIG
+
+	machinectl shell "${_env_user}@" /usr/bin/dockerd-rootless-setuptool.sh install
 }
 
 env::daemon() {
 	local name="${1}"
 
 	local _env_dir="${SYSTEM_ROOT}/$(env_path "${name}")"
-	local _runtime_dir="${_env_dir}.docker/run"
-	local _config_dir="${_env_dir}.config/docker"
-
-	mkdir -p "${_runtime_dir}" "${_config_dir}"
-	chown -R "${name}_env:${name}_env" "${_runtime_dir}" "${_config_dir}"
-	cat <<CONFIG | sudo -u "${name}_env" tee "${_config_dir}/daemon.json" >/dev/null 
-{
-	"storage-driver": "fuse-overlayfs"
-}
-CONFIG
+	local _runtime_dir="${_env_dir}/.docker/run"
 	systemctl start "user@$(id -u "${name}_env")"
 
-	sudo -u "${name}_env" \
-		XDG_RUNTIME_DIR="${_runtime_dir}" \
-		dockerd-rootless.sh
+	mkdir -p "${_runtime_dir}"
+	chown -R "${name}_env:${name}_env" "${_runtime_dir}"
+
+	machinectl shell "${name}_env@" \
+		/bin/bash -c "XDG_RUNTIME_DIR='${_runtime_dir}' dockerd-rootless.sh"
 
 	systemctl stop "user@$(id -u "${name}_env")"
 	rm -rf "${_runtime_dir}"

@@ -116,13 +116,17 @@ if [ -f "${SYSTEM_ROOT}/bin/generic/${argc_service}" ]; then
 	"${SYSTEM_ROOT}/bin/generic/${argc_service}" \
 		"${argc_command}" "${argc_args[@]}"
 else
-	include "<service>"
+	if [ "${USER}" = "${SYSTEM_ENV}_env" ]; then
+		include "<service>"
 
-	service::discover "${argc_service}"
+		service::discover "${argc_service}"
 
-	service::init
+		service::init
 
-	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
-		"${argc_command}" \
-		"${argc_args[@]}"
+		"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
+			"${argc_command}" \
+			"${argc_args[@]}"
+	else
+		sudo -u "${SYSTEM_ENV}_env" "${0}" "${@}"
+	fi
 fi
