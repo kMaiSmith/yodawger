@@ -15,40 +15,60 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# @cmd
-list() {
-	include "<service>"
+set -ueo pipefail
 
-	service::list
-}
-
-# @cmd
-# @arg name!
-# @arg git_url
-add() {
-	include "<service>"
-
-	service::add "${argc_name}" \
-		"${argc_git_url:-"git@github.com:Jeffercodians/yodawg-${argc_name}.git"}"
-
-	service::system_init "${argc_name}"
-}
-
-# @cmd
-# @arg name!
-update() {
-	include "<service>"
-
-	service::update "${argc_name}"
-}
-
-# @cmd
-# @arg name!
 init() {
 	include "<service>"
+	service::discover "${argc_name}"
+	service::init
+}
 
-	service::system_init "${argc_name}"
+# @cmd
+# @arg name!
+up() { init
+	service::up "${argc_name}"
+}
+
+# @cmd
+# @arg name!
+down() { init
+	service::down "${argc_name}"
+}
+
+# @cmd
+# @flag -f --follow
+# @arg name!
+# @arg container
+logs() { init
+	include "<docker>"
+
+	local -a args=()
+
+	if [ "${argc_follow}" -eq 1 ]; then
+		args+=(--follow)
+	fi
+	if [ -n "${argc_container-}" ]; then
+		args+=("${argc_container}")
+	fi
+
+	docker::compose logs "${args[@]}"
+}
+
+# @cmd
+# @arg name!
+status() { init
+	include "<docker>"
+
+	docker::compose ps
+}
+
+# @cmd
+# @meta default-subcommand
+# @arg name!
+# @arg command*
+manage() { init
+	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
+		"${argc_command[@]}"
 }
 
 eval "$(argc --argc-eval "${0}" "${@}")"
-

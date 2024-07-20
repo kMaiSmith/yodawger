@@ -22,6 +22,7 @@
 #credit: Jeff Lieb	Contributed the name "yodawger"
 
 # @option -e --env=`get_default_env` $SERVICE_ENV Environment to manipulate
+# @flag	-A --admin	Execute command in administrative mode
 # @arg	service		Name of the interface to interact with
 # @arg	command		Command to invoke against the interface
 # @arg	args~		Arguments to pass to the interface
@@ -110,22 +111,23 @@ setup_envs
 
 eval "$(argc --argc-eval "${0}" "${@}")"
 
-export SYSTEM_ENV="${argc_env}"
+export SYSTEM_ENV="${argc_env}" SERVICE_ENV="${argc_env}"
 
-if [ -f "${SYSTEM_ROOT}/bin/generic/${argc_service}" ]; then
-	"${SYSTEM_ROOT}/bin/generic/${argc_service}" \
-		"${argc_command}" "${argc_args[@]}"
-else
+if [ "${argc_admin-}" = "1" ]; then
+	if ! [ -f "${SYSTEM_ROOT}/bin/admin/${argc_service}" ]; then
+		error "No admin commands for ${argc_service}"
+	fi
+	if [ "${USER}" = "root" ]; then
+		"${SYSTEM_ROOT}/bin/admin/${argc_service}" \
+			"${argc_command}" "${argc_args[@]}"
+	else
+		consented_sudo "run admin command ${0} ${@} as root" \
+			"${0}" "${@}"
+	fi
+elif [ -f "${SYSTEM_ROOT}/bin/generic/${argc_service}" ]; then
 	if [ "${USER}" = "${SYSTEM_ENV}_env" ]; then
-		include "<service>"
-
-		service::discover "${argc_service}"
-
-		service::init
-
-		"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
-			"${argc_command}" \
-			"${argc_args[@]}"
+		"${SYSTEM_ROOT}/bin/generic/${argc_service}" \
+			"${argc_command}" "${argc_args[@]}"
 	else
 		sudo -u "${SYSTEM_ENV}_env" "${0}" "${@}"
 	fi

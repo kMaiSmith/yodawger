@@ -45,11 +45,11 @@ service::discover() {
 	else
 		SERVICE_ENV="${SYSTEM_ENV}"
 	fi
-	yo env exists "${SERVICE_ENV}" || \
+	ENV_ROOT="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")"
+	[ -d "${ENV_ROOT}" ] || \
 		error "Yodawg environment ${SERVICE_ENV} does not exist"
 	mkdir -p "${SERVICE_ROOT}/env"
 	SERVICE_ENV_ROOT="$(echo "${SERVICE_ROOT}/$(env_path "${SERVICE_ENV}")/" | tr -s /)"
-	ENV_ROOT="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")"
 	ENV_SERVICE_ROOT="$(echo "${ENV_ROOT}/services/${SERVICE_NAME}/" | tr -s /)"
 	SERVICE_CONF="${SERVICE_ROOT}/conf"
 	SERVICE_NETWORK="${SERVICE_ENV}_${SERVICE_NAME}"
