@@ -99,3 +99,9 @@ setup_systemd() {
 	fi
 }
 
+setup_env_groups() {
+	if ! grep -q ^env_global: /etc/group; then
+		consented_sudo "Create the env_global unix group for shared environment services" \
+			groupadd env_global
+	fi
+}

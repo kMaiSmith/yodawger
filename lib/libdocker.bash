@@ -41,6 +41,9 @@ export -f docker::compose
 # - DOCKER_PORTS=("host:container" ...)
 # - DOCKER_CMD=("cmd" "arg" ...)
 docker::run() {
+	docker_socket="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")/.docker/run/docker.sock"
+	export DOCKER_HOST="unix://${docker_socket}"
+
 	local -a docker_args=()
 
 	docker_args+=(
@@ -68,6 +71,9 @@ docker::run() {
 export -f docker::run
 
 docker::network::create() {
+	docker_socket="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")/.docker/run/docker.sock"
+	export DOCKER_HOST="unix://${docker_socket}"
+
 	log INFO "Creating network ${SERVICE_NETWORK}"
 	docker network inspect "${SERVICE_NETWORK}" &>/dev/null || \
 		docker network create "${SERVICE_NETWORK}"
@@ -75,6 +81,9 @@ docker::network::create() {
 export -f docker::network::create
 
 docker::network::rm() {
+	docker_socket="${SYSTEM_ROOT}/$(env_path "${SERVICE_ENV}")/.docker/run/docker.sock"
+	export DOCKER_HOST="unix://${docker_socket}"
+
 	docker network inspect "${SERVICE_NETWORK}" &>/dev/null
 	docker network rm "${SERVICE_NETWORK}"
 }

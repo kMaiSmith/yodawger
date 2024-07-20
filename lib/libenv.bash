@@ -50,6 +50,7 @@ env::init() {
 	mkdir -p "${_env_dir}" "${_env_conf}"
 	sudo -u "${_env_user}" test -O "${_env_dir}" || \
 		chown -R "${_env_user}:${_env_user}" "${_env_dir}"
+	usermod -aG env_global "${_env_user}"
 
 	systemctl enable "yodawg_env@${name}"
 

@@ -30,6 +30,8 @@ add() {
 
 	service::add "${argc_name}" \
 		"${argc_git_url:-"git@github.com:Jeffercodians/yodawg-${argc_name}.git"}"
+
+	service::system_init "${argc_name}"
 }
 
 # @cmd
@@ -38,6 +40,14 @@ update() {
 	include "<service>"
 
 	service::update "${argc_name}"
+}
+
+# @cmd
+# @arg name!
+init() {
+	include "<service>"
+
+	service::system_init "${argc_name}"
 }
 
 eval "$(argc --argc-eval "${0}" "${@}")"

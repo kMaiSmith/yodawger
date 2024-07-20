@@ -108,6 +108,8 @@ setup_argc
 
 setup_systemd
 
+setup_env_groups
+
 eval "$(argc --argc-eval "${0}" "${@}")"
 
 export SYSTEM_ENV="${argc_env}"

@@ -21,6 +21,16 @@ export SHELLOPTS
 
 include "<system/network>"
 
+service::system_init() {
+	local _name="${1}"
+
+	service::discover "${_name}"
+
+	chown :env_global "${SERVICE_ROOT}/env"
+	chmod 730 "${SERVICE_ROOT}/env"
+}
+export -f service::system_init
+
 service::discover() {
 	local _name="${1}"
 
@@ -169,4 +179,3 @@ service::down() {
 	docker::network::rm
 }
 export -f service::down
-
