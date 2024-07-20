@@ -41,18 +41,18 @@ daemon() {
 
 # @cmd
 up() {
-	systemctl start "yodawg_env@${SYSTEM_ENV}"
+	machinectl shell "${SYSTEM_ENV}_env@" /usr/bin/systemctl --user start docker
 }
 
 # @cmd
 down() {
-	systemctl stop "yodawg_env@${SYSTEM_ENV}"
+	machinectl shell "${SYSTEM_ENV}_env@" /usr/bin/systemctl --user stop docker
 }
 
 # @cmd
 # @arg	name
 status() {
-	systemctl status "yodawg_env@${SYSTEM_ENV}"
+	machinectl shell "${SYSTEM_ENV}_env@" /usr/bin/systemctl --user status docker
 }
 
 # @cmd

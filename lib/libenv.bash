@@ -37,6 +37,7 @@ env::get_default() {
 
 	cat "${default_env_file}"
 }
+export -f env::get_default
 
 env::init() {
 	local name="${1}"
@@ -50,9 +51,9 @@ env::init() {
 	mkdir -p "${_env_dir}" "${_env_conf}"
 	sudo -u "${_env_user}" test -O "${_env_dir}" || \
 		chown -R "${_env_user}:${_env_user}" "${_env_dir}"
-	usermod -aG env_global "${_env_user}"
+	loginctl enable-linger "${_env_user}"
 
-	systemctl enable "yodawg_env@${name}"
+	usermod -aG env_global "${_env_user}"
 
 	local _config_dir="${_env_dir}/.config"
 
@@ -65,21 +66,9 @@ env::init() {
 CONFIG
 
 	machinectl shell "${_env_user}@" /usr/bin/dockerd-rootless-setuptool.sh install
+
+	machinectl shell "${_env_user}@" /usr/bin/systemctl --user enable docker
+	machinectl shell "${_env_user}@" /usr/bin/systemctl --user start docker
 }
+export -f env::init
 
-env::daemon() {
-	local name="${1}"
-
-	local _env_dir="${SYSTEM_ROOT}/$(env_path "${name}")"
-	local _runtime_dir="${_env_dir}/.docker/run"
-	systemctl start "user@$(id -u "${name}_env")"
-
-	mkdir -p "${_runtime_dir}"
-	chown -R "${name}_env:${name}_env" "${_runtime_dir}"
-
-	machinectl shell "${name}_env@" \
-		/bin/bash -c "XDG_RUNTIME_DIR='${_runtime_dir}' dockerd-rootless.sh"
-
-	systemctl stop "user@$(id -u "${name}_env")"
-	rm -rf "${_runtime_dir}"
-}

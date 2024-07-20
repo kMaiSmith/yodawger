@@ -91,17 +91,19 @@ setup_argc() {
 	fi
 }
 
-setup_systemd() {
-	if ! [ -L "/etc/systemd/system/yodawg_env@.service" ]; then
-		ln -sf "${SYSTEM_ROOT}/lib/systemd/yodawg_env@.service" \
-			"/etc/systemd/system/yodawg_env@.service"
-		systemctl daemon-reload
-	fi
-}
-
-setup_env_groups() {
+setup_envs() {
 	if ! grep -q ^env_global: /etc/group; then
 		consented_sudo "Create the env_global unix group for shared environment services" \
 			groupadd env_global
+	fi
+
+	if ! package_installed s6; then
+		consented_sudo "Install the s6 supervision/tool suite to enable env process trees and data flows" \
+			apt install -y s6
+	fi
+
+	if ! package_installed socat; then
+		consented_sudo "Install socat to enable piping data between services and endpoints" \
+			apt install -y socat
 	fi
 }

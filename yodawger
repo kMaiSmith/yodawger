@@ -106,9 +106,7 @@ setup_docker
 
 setup_argc
 
-setup_systemd
-
-setup_env_groups
+setup_envs
 
 eval "$(argc --argc-eval "${0}" "${@}")"
 
