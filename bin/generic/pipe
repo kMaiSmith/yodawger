@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Yodawger
+# Copyright (C) 2024  Kyle Smith
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+set -ueo pipefail
+
+# @cmd moves data between service sockets
+# @arg listen_env!
+# @arg listen_service!
+# @arg listen_socket!
+# @arg connect_env!
+# @arg connect_service!
+# @arg connect_socket!
+service_bridge() {
+	local listen_path="${SYSTEM_ROOT}"
+	listen_path+="/$(env_path "${argc_listen_env}")"
+	listen_path+="/services/${argc_listen_service}"
+	listen_path+="/socket/${argc_listen_socket}"
+
+	local connect_path="${SYSTEM_ROOT}"
+	connect_path="/$(env_path "${argc_connect_env}")"
+	connect_path+="/services/${argc_connect_service}"
+	connect_path+="/socket/${argc_connect_socket}"
+
+	if ! [ -S "${connect_path}" ] || ! [ -w "${connect_path}" ]; then
+		error "Cannot bridge to ${argc_connect_env}:${argc_connect_service}:${argc_connect_socket}: ${connect_path} is not a writable socket file"
+	fi
+
+	socat "UNIX-LISTEN:${listen_socket}:fork" "UNIX-CONNECT:${connect_socket}"
+}
+
+
+eval "$(argc --argc-eval "${0}" "${@}")"
