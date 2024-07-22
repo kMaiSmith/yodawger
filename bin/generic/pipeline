@@ -17,6 +17,42 @@
 
 set -ueo pipefail
 
+PIPELINE_ROOT="$(env::get_home)/pipelines"
+
+# @cmd
+# @arg name!
+# @arg listen!
+# @arg connect!
+add() {
+	local name="${argc_name:-"${1}"}"
+	local listen="${argc_listen:-"${2}"}"
+	local connect="${argc_connect:-"${3}"}"
+
+	log INFO "Creating pipeline ${name} from ${connect} to ${listen}"
+	set -x
+	mkdir "${PIPELINE_ROOT}/${name}"
+
+	cat <<PIPELINE >"${PIPELINE_ROOT}/${name}/run"
+#!/usr/bin/env bash
+
+socat "${listen}" "${connect}"
+PIPELINE
+	chmod +x "${PIPELINE_ROOT}/${name}/run"
+
+	# Reload the pipeline supervisor
+	s6-svscanctl -h "${PIPELINE_ROOT}"
+}
+
+# @cmd remove env pipeline
+# @alias rm
+# @arg name!
+del() {
+	rm -r "${PIPELINE_ROOT}/${argc_name}"
+
+	# Reload the pipeline supervisor
+	s6-svscanctl -h "${PIPELINE_ROOT}"
+}
+
 # @cmd moves data between service sockets
 # @arg listen_env!
 # @arg listen_service!
@@ -24,22 +60,22 @@ set -ueo pipefail
 # @arg connect_env!
 # @arg connect_service!
 # @arg connect_socket!
-service_bridge() {
+add_service_bridge() {
 	local listen_path="${SYSTEM_ROOT}"
 	listen_path+="/$(env_path "${argc_listen_env}")"
 	listen_path+="/services/${argc_listen_service}"
 	listen_path+="/socket/${argc_listen_socket}"
 
 	local connect_path="${SYSTEM_ROOT}"
-	connect_path="/$(env_path "${argc_connect_env}")"
+	connect_path+="/$(env_path "${argc_connect_env}")"
 	connect_path+="/services/${argc_connect_service}"
 	connect_path+="/socket/${argc_connect_socket}"
 
-	if ! [ -S "${connect_path}" ] || ! [ -w "${connect_path}" ]; then
-		error "Cannot bridge to ${argc_connect_env}:${argc_connect_service}:${argc_connect_socket}: ${connect_path} is not a writable socket file"
+	if ! [ -S "${connect_path}" ]; then
+		error "Cannot bridge to ${argc_connect_env}:${argc_connect_service}:${argc_connect_socket}: $(readlink -f ${connect_path}) is not a writable socket file"
 	fi
 
-	socat "UNIX-LISTEN:${listen_socket}:fork" "UNIX-CONNECT:${connect_socket}"
+	add "${argc_connect_service}_${argc_listen_service}" "UNIX-LISTEN:${listen_path},fork" "UNIX-CONNECT:${connect_path}"
 }
 
 

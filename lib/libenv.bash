@@ -39,36 +39,100 @@ env::get_default() {
 }
 export -f env::get_default
 
+env::get_user() {
+	local env="${1:-"${SYSTEM_ENV}"}"
+
+	echo "${env}_env"
+}
+export -f env::get_user
+
+env::get_home() {
+	local root env="${1:-"${SYSTEM_ENV}"}"
+
+	root="${SYSTEM_ROOT}/$(env_path "${env}")" || \
+		error "Could not get root for environment: ${env}"
+
+	echo "${root%/}"
+}
+export -f env::get_home
+
 env::init() {
 	local name="${1}"
 
-	local _env_dir _env_conf _env_user="${name}_env"
-	_env_dir="${SYSTEM_ROOT}/$(env_path "${name}")"
-	_env_conf="${_env_dir}/conf"
-	id "${name}_env" &>/dev/null || \
-		useradd --create-home --user-group --home-dir "${_env_dir}" "${name}_env"
+	local env_user="$(env::get_user "${name}")"
+	local env_home="$(env::get_home "${name}")"
 
-	mkdir -p "${_env_dir}" "${_env_conf}"
-	sudo -u "${_env_user}" test -O "${_env_dir}" || \
-		chown -R "${_env_user}:${_env_user}" "${_env_dir}"
-	loginctl enable-linger "${_env_user}"
+	env::init::user "${env_user}" "${env_home}"
+	env::init::rootless_docker "${env_user}" "${env_home}"
+	env::init::pipeline_supervisor "${env_user}" "${env_home}"
+}
+export -f env::init
 
-	usermod -aG env_global "${_env_user}"
+env::init::user() {
+	local env_user="${1}"
+	local env_home="${2}"
 
-	local _config_dir="${_env_dir}/.config"
+	log INFO "Ensuring ${env_user} user is present and configured"
 
-	mkdir -p "${_config_dir}/docker"
-	chown -R "${_env_user}:${_env_user}" "${_config_dir}"
-	cat <<CONFIG | sudo -u "${_env_user}" tee "${_config_dir}/docker/daemon.json" >/dev/null 
+	id "${env_user}" &>/dev/null || \
+		useradd --create-home --user-group --home-dir "${env_home}" "${env_user}"
+
+	sudo -u "${env_user}" test -O "${env_home}" || \
+		chown -R "${env_user}:${env_user}" "${env_home}"
+	loginctl enable-linger "${env_user}"
+
+	usermod -aG env_global "${env_user}"
+}
+export -f env::init::user
+
+env::init::rootless_docker() {
+	local env_user="${1}"
+	local env_home="${2}"
+
+	log INFO "Ensuring rootless dockerd configured and running for ${env_user}"
+
+	local docker_config_root="${env_home}/.config/docker"
+
+	sudo -u "${env_user}" mkdir -p "${docker_config_root}"
+	cat <<CONFIG | sudo -u "${env_user}" tee "${docker_config_root}/daemon.json" >/dev/null 
 {
 	"storage-driver": "fuse-overlayfs"
 }
 CONFIG
+	sudo -u "${env_user}" ln -sTf \
+		"/run/user/$(id -u "${env_user}")/docker.sock" "${env_home}/.docker.sock"
 
-	machinectl shell "${_env_user}@" /usr/bin/dockerd-rootless-setuptool.sh install
+	machinectl shell "${env_user}@" /usr/bin/dockerd-rootless-setuptool.sh install
 
-	machinectl shell "${_env_user}@" /usr/bin/systemctl --user enable docker
-	machinectl shell "${_env_user}@" /usr/bin/systemctl --user start docker
+	machinectl shell "${env_user}@" /usr/bin/systemctl --user enable docker
+	machinectl shell "${env_user}@" /usr/bin/systemctl --user start docker
 }
-export -f env::init
+export -f env::init::rootless_docker
 
+env::init::pipeline_supervisor() {
+	local env_user="${1}"
+	local env_home="${2}"
+
+	log INFO "Ensuring pipeline supervisor configured and runing for ${env_user}"
+
+	local pipeline_root="${env_home}/pipelines"
+
+	sudo -u "${env_user}" mkdir -p "${pipeline_root}"
+
+	cat <<UNIT | sudo -u "${env_user}" tee "${env_home}/.config/systemd/user/pipeline-supervisor.service" >/dev/null
+[Unit]
+Description=Pipeline Supervisor
+
+[Service]
+ExecStart=/usr/bin/s6-svscan "${pipeline_root}"
+Restart=always
+WorkingDirectory=${pipeline_root}
+
+[Install]
+WantedBy=default.target
+UNIT
+	machinectl shell "${env_user}@" /usr/bin/systemctl --user daemon-reload
+	machinectl shell "${env_user}@" /usr/bin/systemctl --user enable pipeline-supervisor
+	machinectl shell "${env_user}@" /usr/bin/systemctl --user start pipeline-supervisor
+}
+export -f env::init::pipeline_supervisor

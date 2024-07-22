@@ -19,7 +19,7 @@
 include "<system/sudo>"
 
 export DOCKER_HOST
-DOCKER_HOST="unix:///run/user/$(id -u)/docker.sock"
+DOCKER_HOST="unix://${HOME}/.docker.sock"
 
 #
 #   Execute wrapped docker compose command to ensure it functions predictably

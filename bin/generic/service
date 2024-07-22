@@ -18,20 +18,22 @@
 set -ueo pipefail
 
 init() {
+	local name="${1}"
+
 	include "<service>"
-	service::discover "${argc_name}"
+	service::discover "${name}"
 	service::init
 }
 
 # @cmd
 # @arg name!
-up() { init
+up() { init "${argc_name}"
 	service::up "${argc_name}"
 }
 
 # @cmd
 # @arg name!
-down() { init
+down() { init "${argc_name}"
 	service::down "${argc_name}"
 }
 
@@ -39,12 +41,12 @@ down() { init
 # @flag -f --follow
 # @arg name!
 # @arg container
-logs() { init
+logs() { init "${argc_name}"
 	include "<docker>"
 
 	local -a args=()
 
-	if [ "${argc_follow}" -eq 1 ]; then
+	if [ "${argc_follow-}" = "1" ]; then
 		args+=(--follow)
 	fi
 	if [ -n "${argc_container-}" ]; then
@@ -55,8 +57,19 @@ logs() { init
 }
 
 # @cmd
+# @flag -f --follow
 # @arg name!
-status() { init
+# @arg container!
+shell() { init "${argc_name}"
+	include "<docker>"
+
+	docker::compose exec "${argc_container}" /bin/sh
+}
+
+
+# @cmd
+# @arg name!
+status() { init "${argc_name}"
 	include "<docker>"
 
 	docker::compose ps
@@ -66,7 +79,7 @@ status() { init
 # @meta default-subcommand
 # @arg name!
 # @arg command*
-manage() { init
+manage() { init "${argc_name}"
 	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
 		"${argc_command[@]}"
 }

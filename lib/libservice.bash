@@ -165,17 +165,27 @@ export -f service::update
 service::up() {
 	include "<docker>"
 
-	docker::network::create
-
+	if [ -x "${SERVICE_ROOT}/bin/pre-up" ]; then
+		rootlesskit -- "${SERVICE_ROOT}/bin/pre-up"
+	fi
 	docker::compose up -d
+	if [ -x "${SERVICE_ROOT}/bin/post-up" ]; then
+		rootlesskit -- "${SERVICE_ROOT}/bin/post-up"
+	fi
 }
 export -f service::up
 
 service::down() {
 	include "<docker>"
 
+	if [ -x "${SERVICE_ROOT}/bin/pre-down" ]; then
+		rootlesskit -- "${SERVICE_ROOT}/bin/pre-down"
+	fi
+
 	docker::compose down
 
-	docker::network::rm
+	if [ -x "${SERVICE_ROOT}/bin/post-down" ]; then
+		rootlesskit -- "${SERVICE_ROOT}/bin/post-down"
+	fi
 }
 export -f service::down
