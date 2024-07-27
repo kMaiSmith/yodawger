@@ -27,73 +27,14 @@
 # @arg	command		Command to invoke against the interface
 # @arg	args~		Arguments to pass to the interface
 
-#
-#   OVERVIEW
-#
-#   This script takes a given debian environment and adds the necessary docker
-# components and folder structures to begin running a set of Multi-Organization
-# Operator containers.
-#
-
-#
-#   CONFIGURATIONS
-#
-#   All Multi-Organization Operator (moo) system files are stored in a
-# hierarchy under the /yodawg directory, unless otherwise specified or needed by
-# your organization.  Additional organizations that may come to operate on this
-# MOO system will get their own domain structure under the /yodawg system base
-# 
-export SYSTEM_ROOT="${SYSTEM_ROOT:-"/yodawg"}"
-export SYSTEM_CONF="${SYSTEM_ROOT}/conf"
-export PATH="${SYSTEM_ROOT}/bin:${PATH}"
-
-mkdir -p "${SYSTEM_CONF}"
-
 set -ueo pipefail
 
-log() {
-	local _level="${1}"
-	local _message="${2}"
+export SYSTEM_ROOT
+SYSTEM_ROOT="$(cd "$(dirname "$(readlink -f "${0}")")" ||:; pwd)"
+source "${SYSTEM_ROOT}/lib/init.bash"
 
-	{ >&9; } 2> /dev/null || exec 9>&2
-
-	echo "[${_level}] ${_message}" >&9
-}
-export -f log
-
-error() {
-	local _message="${1-}"
-
-	if [ -n "${_message-}" ]; then
-		log ERROR "${_message}"
-	fi
-
-	exit 1
-}
-export -f error
-
-include() {
-	local _path
-	case "${1}" in
-		\<*\>)
-			local _lib _lib_dir _lib_file
-			_lib="$(sed -r 's/<(.*)>/\1/' <<< "${1}")"
-			_lib_dir="$(dirname "${_lib}")"
-			_lib_file="lib$(basename "${_lib}").bash"
-			_path="${SYSTEM_ROOT}/lib/${_lib_dir}/${_lib_file}"
-			;;
-		*)
-			_path="$(dirname "${BASH_SOURCE[0]}")/${1}"
-			;;
-			
-	esac
-	if [ -f "${_path}" ]; then
-		source "${_path}"
-	else
-		error "Could not find library ${1}"
-	fi
-}
-export -f include
+export SYSTEM_CONF="${SYSTEM_ROOT}/conf"
+mkdir -p "${SYSTEM_CONF}"
 
 include "<env>"
 include "<setup>"
@@ -103,6 +44,7 @@ get_default_env() { env::get_default; }
 #
 #   INITIALIZE THE ENVIRONMENT
 #
+
 setup_docker
 
 setup_argc
@@ -128,7 +70,7 @@ if [ "${argc_admin-}" = "1" ]; then
 	fi
 elif [ -f "${SYSTEM_ROOT}/bin/generic/${argc_service}" ]; then
 	if [ "${USER}" = "${SYSTEM_ENV}_env" ]; then
-		"${SYSTEM_ROOT}/bin/generic/${argc_service}" \
+		"${SYSTEM_ROOT}/bin/env/${argc_service}" \
 			"${argc_command}" "${argc_args[@]}"
 	else
 		sudo -u "${SYSTEM_ENV}_env" "${0}" "${@}"

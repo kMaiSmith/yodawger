@@ -30,7 +30,7 @@ exists() {
 # @arg name
 add() {
 	include "<system/user>"
-	include "<env>"
+	include "<env/init>"
 
 	env::init "${argc_name:-"${SYSTEM_ENV}"}"
 }
