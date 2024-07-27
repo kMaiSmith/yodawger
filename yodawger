@@ -109,6 +109,8 @@ setup_argc
 
 setup_envs
 
+setup_bats
+
 eval "$(argc --argc-eval "${0}" "${@}")"
 
 export SYSTEM_ENV="${argc_env}" SERVICE_ENV="${argc_env}"

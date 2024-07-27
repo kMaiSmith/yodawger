@@ -91,6 +91,23 @@ setup_argc() {
 	fi
 }
 
+setup_bats() {
+	if [ "$(bats --version)" != "Bats 1.11.0" ]; then ( set -ueo pipefail
+		local download_root
+		download_root="$(mktemp -d)"
+
+		cd "${download_root}"
+		curl -SsLo "bats.tar.gz" \
+			"https://github.com/bats-core/bats-core/archive/refs/tags/v1.11.0.tar.gz"
+
+		tar -xf "bats.tar.gz" --strip-components 1
+
+		./install.sh "/usr/local"
+
+		rm -rf "${download_root}"
+	); fi
+}
+
 setup_envs() {
 	if ! grep -q ^env_global: /etc/group; then
 		consented_sudo "Create the env_global unix group for shared environment services" \

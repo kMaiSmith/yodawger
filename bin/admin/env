@@ -19,47 +19,28 @@
 set -ueo pipefail
 
 # @cmd
+# @arg name
 exists() {
-	[ -d "${SYSTEM_ROOT}/$(env_path "${SYSTEM_ENV}")" ] && \
-	{ [ "${SYSTEM_ENV}" = "host" ] || id "${SYSTEM_ENV}_env" &>/dev/null; }
+	local env="${argc_name:-"${SYSTEM_ENV}"}"
+
+	[ -d "${SYSTEM_ROOT}/env/${env}" ] && id "${SYSTEM_ENV}_env" &>/dev/null
 }
 
 # @cmd
-init() {
+# @arg name
+add() {
 	include "<system/user>"
 	include "<env>"
 
-	env::init "${SYSTEM_ENV}"
+	env::init "${argc_name:-"${SYSTEM_ENV}"}"
 }
 
 # @cmd
-daemon() {
-	include "<env>"
+# @arg name
+shell() {
+	local env="${argc_name:-"${SYSTEM_ENV}"}"
 
-	env::daemon "${SYSTEM_ENV}"
+	machinectl shell "${env}_env@" /usr/bin/bash
 }
-
-# @cmd
-up() {
-	machinectl shell "${SYSTEM_ENV}_env@" /usr/bin/systemctl --user start docker
-}
-
-# @cmd
-down() {
-	machinectl shell "${SYSTEM_ENV}_env@" /usr/bin/systemctl --user stop docker
-}
-
-# @cmd
-# @arg	name
-status() {
-	machinectl shell "${SYSTEM_ENV}_env@" /usr/bin/systemctl --user status docker
-}
-
-# @cmd
-# @arg	name
-remove() {
-	:
-}
-
 
 eval "$(argc --argc-eval "${0}" "${@}")"

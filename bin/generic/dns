@@ -21,30 +21,25 @@ set -ueo pipefail
 include "<generic>"
 
 # @cmd
-up() {
-	yo "${GENERIC_SERVICE_dns}" up
-}
-
-# @cmd
 reload() {
-	yo "${GENERIC_SERVICE_dns}" reload
+	yo service manage "${GENERIC_SERVICE_dns}" reload
 }
 
 # @cmd
 list_zones() {
-	yo "${GENERIC_SERVICE_dns}" list_zones
+	yo service manage "${GENERIC_SERVICE_dns}" list_zones
 }
 
 # @cmd
 # @arg	zone
 add_zone() {
-	yo "${GENERIC_SERVICE_dns}" add_zone "${argc_zone}"
+	yo service manage "${GENERIC_SERVICE_dns}" add_zone "${argc_zone}"
 }
 
 # @cmd
 # @arg	zone
 remove_zone() {
-	yo "${GENERIC_SERVICE_dns}" remove_zone "${argc_zone}"
+	yo service manage "${GENERIC_SERVICE_dns}" remove_zone "${argc_zone}"
 }
 
 # @cmd
@@ -62,7 +57,7 @@ all_zones() {
 # @cmd
 # @arg	zone
 list_records() {
-	yo "${GENERIC_SERVICE_dns}" list_records "${argc_zone}"
+	yo service manage "${GENERIC_SERVICE_dns}" list_records "${argc_zone}"
 }
 
 # @cmd
@@ -71,7 +66,7 @@ list_records() {
 # @arg	type
 # @arg	value
 add_record() {
-	yo "${GENERIC_SERVICE_dns}" add_record "${argc_zone}" \
+	yo service manage "${GENERIC_SERVICE_dns}" add_record "${argc_zone}" \
 		"${argc_name}" "${argc_type}" "${argc_value}"
 }
 
@@ -80,7 +75,7 @@ add_record() {
 # @arg name
 # @arg type
 get_record() {
-	yo "${GENERIC_SERVICE_dns}" get_record "${argc_zone}" \
+	yo service manage "${GENERIC_SERVICE_dns}" get_record "${argc_zone}" \
 		"${argc_name}" "${argc_type}"
 }
 
@@ -90,7 +85,7 @@ get_record() {
 # @arg name
 # @arg type
 remove_record() {
-	yo "${GENERIC_SERVICE_dns}" remove_record "${argc_zone}" \
+	yo service manage "${GENERIC_SERVICE_dns}" remove_record "${argc_zone}" \
 		"${argc_name}" "${argc_type}"
 }
 

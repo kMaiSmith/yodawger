@@ -76,12 +76,30 @@ status() { init "${argc_name}"
 }
 
 # @cmd
+# @arg name!
+test() { init "${argc_name}"
+	[ -d "${SERVICE_ROOT}/test" ] || \
+		error "No tests defined for service: ${SERVICE_NAME}"
+
+	bats "${SERVICE_ROOT}/test"
+}
+
+# @cmd
 # @meta default-subcommand
 # @arg name!
 # @arg command*
 manage() { init "${argc_name}"
 	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
 		"${argc_command[@]}"
+}
+
+# @cmd
+# @arg name!
+manager() { init "${argc_name}"
+	while read -ra cmd; do
+		"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
+			"${cmd[@]}" 2>&1
+	done
 }
 
 eval "$(argc --argc-eval "${0}" "${@}")"

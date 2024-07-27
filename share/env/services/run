@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+BASE_DIR="$(cd "$(dirname "${0}")" ||:; pwd)"
+SCAN_DIR="${BASE_DIR}/.run"
+
+mkdir -p "${SCAN_DIR}"
+find "${BASE_DIR}" -mindepth 2 -maxdepth 2 -name "run" -type f -exec dirname {} \; | \
+	xargs -r ln -sft "${SCAN_DIR}"
+
+exec s6-svscan "${SCAN_DIR}"

@@ -17,15 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 env_path() {
-	local IFS=":"
-	local _path=""
-
-	if [ "${1}" != "host" ]; then
-		for subenv in ${1}; do
-			_path+="env/${subenv}/"
-		done
-		echo "${_path%/}"
-	fi
+	echo "env/${1}"
 }
 export -f env_path
 
@@ -47,12 +39,9 @@ env::get_user() {
 export -f env::get_user
 
 env::get_home() {
-	local root env="${1:-"${SYSTEM_ENV}"}"
+	local env="${1:-"${SYSTEM_ENV}"}"
 
-	root="${SYSTEM_ROOT}/$(env_path "${env}")" || \
-		error "Could not get root for environment: ${env}"
-
-	echo "${root%/}"
+	echo "${SYSTEM_ROOT}/env/${env}"
 }
 export -f env::get_home
 
@@ -75,10 +64,15 @@ env::init::user() {
 	log INFO "Ensuring ${env_user} user is present and configured"
 
 	id "${env_user}" &>/dev/null || \
-		useradd --create-home --user-group --home-dir "${env_home}" "${env_user}"
+		useradd --user-group --home-dir "${env_home}" "${env_user}"
 
-	sudo -u "${env_user}" test -O "${env_home}" || \
-		chown -R "${env_user}:${env_user}" "${env_home}"
+	local env_template_dir="${SYSTEM_ROOT}/share/env"
+
+	install -o "${env_user}" -g "${env_user}" -d "${env_home}"
+
+	find /etc/skel "${env_template_dir}" -mindepth 1 -maxdepth 1 -exec \
+		rsync -rEAX --chown="${env_user}:${env_user}" {} "${env_home}/" \;
+
 	loginctl enable-linger "${env_user}"
 
 	usermod -aG env_global "${env_user}"
@@ -104,8 +98,8 @@ CONFIG
 
 	machinectl shell "${env_user}@" /usr/bin/dockerd-rootless-setuptool.sh install
 
-	machinectl shell "${env_user}@" /usr/bin/systemctl --user enable docker
-	machinectl shell "${env_user}@" /usr/bin/systemctl --user start docker
+	machinectl shell "${env_user}@" /usr/bin/systemctl --user stop docker
+	machinectl shell "${env_user}@" /usr/bin/systemctl --user disable docker
 }
 export -f env::init::rootless_docker
 
@@ -132,7 +126,7 @@ WorkingDirectory=${pipeline_root}
 WantedBy=default.target
 UNIT
 	machinectl shell "${env_user}@" /usr/bin/systemctl --user daemon-reload
-	machinectl shell "${env_user}@" /usr/bin/systemctl --user enable pipeline-supervisor
-	machinectl shell "${env_user}@" /usr/bin/systemctl --user start pipeline-supervisor
+	machinectl shell "${env_user}@" /usr/bin/systemctl --user stop pipeline-supervisor
+	machinectl shell "${env_user}@" /usr/bin/systemctl --user disable pipeline-supervisor
 }
 export -f env::init::pipeline_supervisor
