@@ -71,7 +71,7 @@ env::init::user() {
 	install -o "${env_user}" -g "${env_user}" -d "${env_home}"
 
 	find /etc/skel "${env_template_dir}" -mindepth 1 -maxdepth 1 -exec \
-		rsync -rEAX --chown="${env_user}:${env_user}" {} "${env_home}/" \;
+		rsync -rlEAX --chown="${env_user}:${env_user}" {} "${env_home}/" \;
 
 	loginctl enable-linger "${env_user}"
 

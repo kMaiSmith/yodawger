@@ -1,0 +1,14 @@
+[Unit]
+Description=YoDawg Tenant Supervisor
+After=network.target
+
+[Service]
+ExecStart=/yodawg/env/run
+ExecStop=/usr/bin/s6-svscanctl -q /yodawg/env/.run
+ExecStop=/usr/bin/sleep 1
+Restart=on-failure
+Type=exec
+User=root
+
+[Install]
+WantedBy=multi-user.target
