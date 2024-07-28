@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+LOG_ROOT="$(cd "$(dirname "${0}")" ||:; pwd)"
+
+mkdir -p "${LOG_ROOT}/data"
+
+exec s6-log -b n10 s1000000 t "${LOG_ROOT}/data"
+

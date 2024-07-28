@@ -25,6 +25,7 @@ env::init() {
 	local env_home="$(env::get_home "${name}")"
 
 	env::init::user "${env_user}" "${env_home}"
+	env::init::slice "${env_user}"
 	env::init::rootless_docker "${env_user}" "${env_home}"
 }
 export -f env::init
@@ -57,6 +58,20 @@ env::init::home() {
 }
 export -f env::init::home
 
+env::init::slice() {
+	local env_user="${1}"
+
+	cat <<SLICE >"/etc/systemd/system/${env_user}.slice"
+[Unit]
+Description=${env_user} Tenant Slice
+
+[Install]
+WantedBy=multi-user.target
+SLICE
+
+	systemctl daemon-reload
+}
+
 env::init::rootless_docker() {
 	local env_user="${1}"
 	local env_home="${2}"
@@ -68,7 +83,8 @@ env::init::rootless_docker() {
 	sudo -u "${env_user}" mkdir -p "${docker_config_root}"
 	cat <<CONFIG | sudo -u "${env_user}" tee "${docker_config_root}/daemon.json" >/dev/null 
 {
-	"storage-driver": "fuse-overlayfs"
+	"storage-driver": "fuse-overlayfs",
+	"exec-opts": ["native.cgroupdriver=cgroupfs"]
 }
 CONFIG
 	sudo -u "${env_user}" ln -sTf \

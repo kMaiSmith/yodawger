@@ -3,41 +3,32 @@
 set -ueo pipefail
 
 BASE_DIR="$(cd "$(dirname "${0}")" ||:; pwd)"
-SCAN_DIR="${BASE_DIR}/.run"
 ENV_USER="$(stat -c '%U' "${BASE_DIR}")"
 
-if [ "${ENV_USER}" = "root" ]; then
+if [ "${ENV_USER}" = "$(stat -c '%U' /)" ]; then
 	echo "Cannot launch environment as root"
 	exit 1
 fi
 
-if [ "${USER}" = "${ENV_USER}" ]; then
-	mkdir -p "${SCAN_DIR}/.s6-svscan"
-	ln -sft "${SCAN_DIR}" \
-		"${BASE_DIR}/services" "${BASE_DIR}/pipelines" \
-		"${BASE_DIR}/envs" "${BASE_DIR}/dockerd"
+if [ -O "${BASE_DIR}" ]; then
+	source "${HOME}/.local/lib/init.bash"
 
-	cat <<FINISH >"${SCAN_DIR}/.s6-svscan/finish"
-#!/usr/bin/env bash
+	include "<s6>"
 
-readarray -t envs < <(find "${BASE_DIR}" -maxdepth 2 -mindepth 2 -name '.run' -type d)
+	echo "Starting an s6-svscan"
 
-for env in "\${envs[@]}"; do
-	if [ -p "\${env}/.s6-svscan/control" ]; then
-		s6-svscanctl -t "\${env}"
-	fi
-done
-FINISH
-	chmod +x "${SCAN_DIR}/.s6-svscan/finish"
+	s6::setup_finalize "${BASE_DIR}"
+	s6::exec_svscan "${BASE_DIR}"
+else
+	echo "Yodawgin it into a rootlesskit"
 
-	exec rootlesskit --pidns \
+	exec machinectl shell "${ENV_USER}@" /usr/bin/rootlesskit \
+		--pidns \
 		--net=slirp4netns --mtu=65520 \
 		--slirp4netns-sandbox=auto \
 		--slirp4netns-seccomp=auto \
 		--disable-host-loopback --port-driver=slirp4netns \
 		--copy-up=/etc --copy-up=/run \
 		--propagation=rslave -- \
-		s6-svscan "${SCAN_DIR}"
-else
-	exec machinectl shell "${ENV_USER}@" "${BASE_DIR}/run"
+		"${BASE_DIR}/run"
 fi

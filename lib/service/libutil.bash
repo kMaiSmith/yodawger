@@ -21,7 +21,7 @@ export SHELLOPTS
 
 service::get_password() {
 	local _name="${1:-"default"}"
-	local _password_file="${SERVICE_ENV_CONF}/password.${_name}"
+	local _password_file="${COMPONENT_CONF}/password.${_name}"
 
 	[ -f "${_password_file}" ] || \
 		date +%s | sha256sum | base64 | head -c 32 > "${_password_file}"
@@ -33,7 +33,7 @@ export -f service::get_password
 
 service::get_port() {
 	local _name="${1:-"default"}"
-	local _port_file="${SERVICE_ENV_CONF}/port.${_name}"
+	local _port_file="${COMPONENT_CONF}/port.${_name}"
 
 	[ -f "${_port_file}" ] || \
 		python3 <<PYTHON > "${_port_file}"
@@ -51,50 +51,3 @@ PYTHON
 }
 export -f service::get_port
 
-service::add() {
-	local _name="${1}"
-	local _git_url="${2}"
-
-	if [ -d "${SYSTEM_ROOT}/services/${_name}" ]; then
-		error "Service ${_name} already exists"
-	fi
-
-	mkdir -p "${SYSTEM_ROOT}/services"
-	git clone "${_git_url}" "${SYSTEM_ROOT}/services/${_name}"
-}
-export -f service::add
-
-service::update() {
-	local _name="${1}"
-
-	git -C "${SYSTEM_ROOT}/services/${_name}" pull
-}
-export -f service::update
-
-service::up() {
-	include "<docker>"
-
-	if [ -x "${SERVICE_ROOT}/bin/pre-up" ]; then
-		rootlesskit -- "${SERVICE_ROOT}/bin/pre-up"
-	fi
-	docker::compose up -d
-	if [ -x "${SERVICE_ROOT}/bin/post-up" ]; then
-		rootlesskit -- "${SERVICE_ROOT}/bin/post-up"
-	fi
-}
-export -f service::up
-
-service::down() {
-	include "<docker>"
-
-	if [ -x "${SERVICE_ROOT}/bin/pre-down" ]; then
-		rootlesskit -- "${SERVICE_ROOT}/bin/pre-down"
-	fi
-
-	docker::compose down
-
-	if [ -x "${SERVICE_ROOT}/bin/post-down" ]; then
-		rootlesskit -- "${SERVICE_ROOT}/bin/post-down"
-	fi
-}
-export -f service::down

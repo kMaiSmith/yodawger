@@ -36,15 +36,13 @@ export -f docker::compose
 # - DOCKER_IMAGE="registry/image:tag"
 # - DOCKER_MOUNTS=("/host/path:/container/path" ...)
 # - DOCkER_ENVS=(VAR="value" ...)
-# - DOCKER_PORTS=("host:container" ...)
 # - DOCKER_CMD=("cmd" "arg" ...)
-docker::run() {
+docker::exec_run() {
 	local -a docker_args=()
 
 	docker_args+=(
-		"--network" "${SERVICE_ENV}"
-		"--name" "${SERVICE_ENV}-${SERVICE_NAME}"
-		"--user" "$(id -u "${SERVICE_ENV}_env"):$(id -g "${SERVICE_ENV}_env")"
+		"--name" "${SERVICE_NAME}-${COMPONENT_NAME}"
+		"--rm"
 	)
 
 	for mount in "${DOCKER_MOUNTS[@]}"; do
@@ -55,15 +53,9 @@ docker::run() {
 		docker_args+=("--env" "${env}")
 	done
 
-	if [ "${SERVICE_ENV}" != "host" ]; then
-		for port in "${DOCKER_PORTS[@]}"; do
-			docker_args+=("--port" "127.0.0.1:${port}")
-		done
-	fi
-
-	docker run "${docker_args[@]}" "${DOCKER_IMAGE}" "${DOCKER_CMD[@]}"
+	exec docker run "${docker_args[@]}" "${DOCKER_IMAGE}" "${DOCKER_CMD[@]}" 2>&1
 }
-export -f docker::run
+export -f docker::exec_run
 
 docker::network::create() {
 	log INFO "Creating network ${SERVICE_NETWORK}"
