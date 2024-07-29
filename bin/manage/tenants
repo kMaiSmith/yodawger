@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+MANAGE_DIR="$(cd "$(dirname "${0}")" ||:; pwd)"
+
+# @cmd
+list() {
+	s6-instance-list "${MANAGE_DIR}"
+}
+
+# @cmd
+# @arg name
+create() {
+	s6-instance-create "${MANAGE_DIR}" "${argc_name}"
+}
+
+# @cmd
+# @arg name
+delete() {
+	s6-instance-delete "${MANAGE_DIR}" "${argc_name}"
+}
+
+# @cmd
+# @arg name
+status() {
+	s6-instance-status "${MANAGE_DIR}" "${argc_name}"
+}
+
+eval "$(argc --argc-eval "${0}" "${@}")"

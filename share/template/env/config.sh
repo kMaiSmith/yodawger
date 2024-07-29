@@ -1,2 +1,0 @@
-# ORG_NAME=
-# ORG_DOMAIN=

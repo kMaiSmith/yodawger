@@ -19,6 +19,11 @@
 set -ueo pipefail
 export SHELLOPTS
 
+service::get_root() {
+	local name="${1}"
+}
+export -f server::get_root
+
 service::get_password() {
 	local _name="${1:-"default"}"
 	local _password_file="${SERVICE_ENV_CONF}/password.${_name}"

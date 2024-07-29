@@ -17,33 +17,33 @@
 
 set -ueo pipefail
 
+MANAGE_DIR="$(cd "$(dirname "${0}")" ||:; pwd)"
+
+if ! [ -O "${MANAGE_DIR}" ]; then
+	exec sudo -u "$(stat -c '%U' ${MANAGE_DIR})" "${0}" "${@}"
+fi
+
 # @cmd
 list() {
-	:
+	s6-instance-list "${MANAGE_DIR}"
 }
 
 # @cmd
-add() {
-	:
+# @arg name
+create() {
+	s6-instance-create "${MANAGE_DIR}" "${argc_name}"
 }
 
 # @cmd
-del() {
-	:
-}
-
-update() {
-	:
+# @arg name
+delete() {
+	s6-instance-delete "${MANAGE_DIR}" "${argc_name}"
 }
 
 # @cmd
-enable() {
-	:
-}
-
-# @cmd
-disable() {
-	:
+# @arg name
+status() {
+	s6-instance-status "${MANAGE_DIR}" "${argc_name}"
 }
 
 eval "$(argc --argc-eval "${0}" "${@}")"

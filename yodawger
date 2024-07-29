@@ -68,7 +68,7 @@ if [ "${argc_admin-}" = "1" ]; then
 		consented_sudo "run admin command ${0} ${@} as root" \
 			"${0}" "${@}"
 	fi
-elif [ -f "${SYSTEM_ROOT}/bin/generic/${argc_service}" ]; then
+elif [ -f "${SYSTEM_ROOT}/bin/env/${argc_service}" ]; then
 	if [ "${USER}" = "${SYSTEM_ENV}_env" ]; then
 		"${SYSTEM_ROOT}/bin/env/${argc_service}" \
 			"${argc_command}" "${argc_args[@]}"

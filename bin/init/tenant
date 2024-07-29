@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
-source "/yodawg/lib/init.bash"
+set -ueo pipefail
 
 BASE_DIR="$(cd "$(dirname "${0}")" ||:; pwd)"
 
+source "/yodawg/lib/init.bash"
+
 include "<s6>"
 
-s6::exec_svscan "${BASE_DIR}"
+s6::populate_services "${BASE_DIR}"
 

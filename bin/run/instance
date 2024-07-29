@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+set -ueo pipefail
+
+BASE_DIR="$(cd "$(dirname "${0}")" ||:; pwd)"
+
+s6-svscan -c500 "${BASE_DIR}/instance"
+

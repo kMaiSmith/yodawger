@@ -41,7 +41,7 @@ export -f env::get_user
 env::get_home() {
 	local env="${1:-"${SYSTEM_ENV}"}"
 
-	echo "${SYSTEM_ROOT}/env/${env}"
+	echo "${SYSTEM_ROOT}/tenants/instances/${env}"
 }
 export -f env::get_home
 

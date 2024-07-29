@@ -17,23 +17,17 @@
 
 set -ueo pipefail
 
-init() {
-	local name="${1}"
-
-	include "<service>"
-	service::discover "${name}"
-	service::init
-}
+include "<service>"
 
 # @cmd
 # @arg name!
-up() { init "${argc_name}"
+up() {
 	service::up "${argc_name}"
 }
 
 # @cmd
 # @arg name!
-down() { init "${argc_name}"
+down() {
 	service::down "${argc_name}"
 }
 
@@ -41,7 +35,7 @@ down() { init "${argc_name}"
 # @flag -f --follow
 # @arg name!
 # @arg container
-logs() { init "${argc_name}"
+logs() {
 	include "<docker>"
 
 	local -a args=()
@@ -60,7 +54,7 @@ logs() { init "${argc_name}"
 # @flag -f --follow
 # @arg name!
 # @arg container!
-shell() { init "${argc_name}"
+shell() {
 	include "<docker>"
 
 	docker::compose exec "${argc_container}" /bin/sh
@@ -69,15 +63,17 @@ shell() { init "${argc_name}"
 
 # @cmd
 # @arg name!
-status() { init "${argc_name}"
+status() {
 	include "<docker>"
+
+	log INFO "Statusing ${argc_name}"
 
 	docker::compose ps
 }
 
 # @cmd
 # @arg name!
-test() { init "${argc_name}"
+test() {
 	[ -d "${SERVICE_ROOT}/test" ] || \
 		error "No tests defined for service: ${SERVICE_NAME}"
 
@@ -88,14 +84,14 @@ test() { init "${argc_name}"
 # @meta default-subcommand
 # @arg name!
 # @arg command*
-manage() { init "${argc_name}"
+manage() {
 	"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
 		"${argc_command[@]}"
 }
 
 # @cmd
 # @arg name!
-manager() { init "${argc_name}"
+manager() {
 	while read -ra cmd; do
 		"${SERVICE_ROOT}/bin/${SERVICE_NAME}" \
 			"${cmd[@]}" 2>&1

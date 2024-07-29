@@ -40,17 +40,21 @@ env::init::user() {
 		useradd --user-group --home-dir "${env_home}" "${env_user}"
 	fi
 
-	env::init::home
+	env::init::home "${env_user}" "${env_home}"
 
 	usermod -aG env_global "${env_user}"
 }
 export -f env::init::user
 
 env::init::home() {
-	log INFO "ensuring env home directory is configured"
+	local env_user="${1}"
+	local env_home="${2}"
 
-	local env_template_dir="${SYSTEM_ROOT}/share/env"
+	log INFO "ensuring home directory ${env_home} is configured for ${env_user}"
 
+	local env_template_dir="${SYSTEM_ROOT}/tenants/template"
+
+	chown "${env_user}:${env_user}" "${env_home}"
 	install -o "${env_user}" -g "${env_user}" -d "${env_home}"
 
 	find /etc/skel "${env_template_dir}" -mindepth 1 -maxdepth 1 -exec \
@@ -73,27 +77,27 @@ SLICE
 }
 
 env::init::rootless_docker() {
-	local env_user="${1}"
-	local env_home="${2}"
+       local env_user="${1}"
+       local env_home="${2}"
 
-	log INFO "Ensuring rootless dockerd configured and running for ${env_user}"
+       log INFO "Ensuring rootless dockerd configured and running for ${env_user}"
 
-	local docker_config_root="${env_home}/.config/docker"
+       local docker_config_root="${env_home}/.config/docker"
 
-	sudo -u "${env_user}" mkdir -p "${docker_config_root}"
-	cat <<CONFIG | sudo -u "${env_user}" tee "${docker_config_root}/daemon.json" >/dev/null 
+       sudo -u "${env_user}" mkdir -p "${docker_config_root}"
+       cat <<CONFIG | sudo -u "${env_user}" tee "${docker_config_root}/daemon.json" >/dev/null 
 {
-	"storage-driver": "fuse-overlayfs",
-	"exec-opts": ["native.cgroupdriver=cgroupfs"]
+       "storage-driver": "fuse-overlayfs",
+       "exec-opts": ["native.cgroupdriver=cgroupfs"]
 }
 CONFIG
-	sudo -u "${env_user}" ln -sTf \
-		"/run/user/$(id -u "${env_user}")/docker.sock" "${env_home}/.docker.sock"
+       sudo -u "${env_user}" ln -sTf \
+               "/run/user/$(id -u "${env_user}")/docker.sock" "${env_home}/.docker.sock"
 
-	machinectl shell "${env_user}@" /usr/bin/dockerd-rootless-setuptool.sh install
+       machinectl shell "${env_user}@" /usr/bin/dockerd-rootless-setuptool.sh install
 
-	machinectl shell "${env_user}@" /usr/bin/systemctl --user stop docker
-	machinectl shell "${env_user}@" /usr/bin/systemctl --user disable docker
+       machinectl shell "${env_user}@" /usr/bin/systemctl --user stop docker
+       machinectl shell "${env_user}@" /usr/bin/systemctl --user disable docker
 }
 export -f env::init::rootless_docker
 

@@ -3,24 +3,27 @@
 set -ueo pipefail
 
 BASE_DIR="$(cd "$(dirname "${0}")" ||:; pwd)"
-ENV_USER="$(stat -c '%U' "${BASE_DIR}")"
+ENV_USER="${1}_env"
 
 if [ "${ENV_USER}" = "$(stat -c '%U' /)" ]; then
 	echo "Cannot launch environment as root"
 	exit 1
 fi
 
-if [ -O "${BASE_DIR}" ]; then
+if [ "${USER}" = "${ENV_USER}" ]; then
 	source "${HOME}/.local/lib/init.bash"
 
 	include "<s6>"
 
 	echo "Starting an s6-svscan"
 
-	s6::setup_finalize "${BASE_DIR}"
 	s6::exec_svscan "${BASE_DIR}"
 else
-	echo "Yodawgin it into a rootlesskit"
+	source "/yodawg/lib/init.bash"
+
+	include "<env/init>"
+
+	env::init "${1}"
 
 	exec machinectl shell "${ENV_USER}@" /usr/bin/rootlesskit \
 		--pidns \
@@ -30,5 +33,5 @@ else
 		--disable-host-loopback --port-driver=slirp4netns \
 		--copy-up=/etc --copy-up=/run \
 		--propagation=rslave -- \
-		"${BASE_DIR}/run"
+		"${BASE_DIR}/run" "${1}"
 fi

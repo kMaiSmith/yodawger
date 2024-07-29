@@ -3,9 +3,9 @@ Description=YoDawg Tenant Supervisor
 After=network.target
 
 [Service]
-ExecStart=/yodawg/env/run
-ExecStop=/usr/bin/s6-svscanctl -q /yodawg/env/.run
-ExecStop=/usr/bin/sleep 1
+WorkingDirectory=/yodawg/tenants
+ExecStart=/yodawg/tenants/run
+ExecStop=/yodawg/tenants/finish
 Restart=on-failure
 Type=exec
 User=root

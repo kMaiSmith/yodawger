@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+ENV_DIR="$(cd "$(dirname "${0}")" ||:; pwd)"
+
+s6-svscanctl -t "${ENV_DIR}/instance"
+
